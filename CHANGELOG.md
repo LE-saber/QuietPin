@@ -1,6 +1,6 @@
 # 更新日志 / Changelog
 
-## v0.2.0 — 2026-10-05 · 预发布 / Prerelease
+## v0.2.0 — 2026-10-05 · 正式发布 / Stable release
 
 ### 中文
 
@@ -13,7 +13,7 @@
 - 升级/卸载仅请求本安装路径实例退出，保留配置与其他路径启动项。
 - 补齐中英文 README、验证记录和双语发布说明。
 
-最终人工验收待完成，真实混合 DPI/多屏与完整应用矩阵不标记通过。完整证据见 [验证记录](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.zh-CN.md)。
+用户确认人工测试通过并批准正式发布，沿用已测试的发布文件。真实混合 DPI/多屏与完整应用矩阵仍按已有记录跟踪，不扩大用户反馈范围。完整证据见 [验证记录](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.zh-CN.md)。
 
 ### English
 
@@ -26,7 +26,7 @@
 - Upgrade/uninstall only request exit from the installed path, preserving configuration and other paths' startup entries.
 - Added Chinese/English READMEs, verification records and bilingual release notes.
 
-Final manual acceptance is pending. Real mixed-DPI/multi-monitor and the complete application matrix are not marked verified. See the [verification record](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.en.md).
+The user confirmed manual testing passed and approved stable publication using the tested release files. Broader mixed-DPI/multi-monitor and application-matrix coverage remains separately tracked. See the [verification record](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.en.md).
 
 ## v0.1.0 — 2026-10-05
 

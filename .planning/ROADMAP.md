@@ -1,13 +1,13 @@
 # QuietPin Roadmap — v0.2
 
-用户批准完整技术文档；阶段 1–3 的 v0.1 MVP 已交付并获用户测试确认。v0.1.0 已发布；阶段 4 v0.2 代码与安装/便携候选包已交付，最终人工验收及阶段 5 完整平台验证待后续推进。
+用户批准完整技术文档；阶段 1–3 的 v0.1 MVP 已交付并获用户测试确认。v0.1.0 已发布；阶段 4 v0.2 已交付，用户确认人工测试通过并批准正式发布；更广的平台验证保留阶段 5。
 
 | Phase | Goal | State |
 | --- | --- | --- |
 | 1 | 后台核心、默认热键、筛选、身份与权限安全 | Implemented; MVP tests passed; platform gaps recorded |
 | 2 | 设置、配置、语言、排除、登录启动与退出 | Implemented; MVP tests passed; real sign-in pending |
 | 3 | 状态提示与可选托盘，MVP 包与核心验证 | Implemented; MVP tests passed; tray interaction gaps recorded |
-| 4 | Pin 按钮、事件跟随、多显示器和 DPI | Implemented; 3/3 summaries; human verification pending |
+| 4 | Pin 按钮、事件跟随、多显示器和 DPI | Released; 3/3 summaries; user acceptance confirmed |
 | 5 | 完整兼容矩阵、长时间性能、MSVC/签名发布准备 | Pending |
 
 ### Phase 1: 后台核心
@@ -66,13 +66,13 @@
 
 ## Progress
 
-此表供 GSD 工具读取。阶段 1–3 共用已完成的 01-mvp/01-PLAN；MVP 已交付，但三个阶段保留平台手工缺口，故仍为 In progress。阶段 4 三份实施计划已有 SUMMARY，但真实双屏与最终人工验收待完成，不能标记完整平台验证 Complete。
+此表供 GSD 工具读取。阶段 1–3 共用已完成的 01-mvp/01-PLAN；MVP 已交付，但三个阶段保留平台手工缺口，故仍为 In progress。阶段 4 三份实施计划已有 SUMMARY，用户确认发布验收通过；阶段 4 交付完成，更广的平台矩阵由阶段 5 跟踪。
 
 | Phase | Plans Complete | Status | Completed |
 | --- | --- | --- | --- |
 | 1. 后台核心 | 1/1 | In progress | MVP verified 2026-10-05; platform gaps pending |
 | 2. 可管理后台 | 0/0 | In progress | Shared MVP plan; real sign-in pending |
 | 3. 可选反馈与 MVP | 0/0 | In progress | Shared MVP plan; manual tray gaps pending |
-| 4. Pin | 3/3 | In progress | Candidate delivered 2026-10-05; human verification pending |
+| 4. Pin | 3/3 | Complete | User acceptance and stable release 2026-10-05 |
 | 5. 完整验收 | 0/0 | Not started | — |
 

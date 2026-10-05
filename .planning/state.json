@@ -21,7 +21,7 @@
     {
       "number": "4",
       "name": "Pin",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "number": "5",
@@ -30,9 +30,9 @@
     }
   ],
   "next": {
-    "command": "manual-v0.2-verification",
-    "label": "人工测试 v0.2 安装版与便携版",
-    "reason": "v0.2.0 GitHub 双语预发布已公开；用户人工验收待完成"
+    "command": "/gsd:progress --next",
+    "label": "阶段 5 广泛平台验证（待后续指令）",
+    "reason": "用户人工验收通过；v0.2.0 正式发布，阶段 4 交付完成"
   },
-  "updated_at": "2026-10-05T06:54:24.6433842Z"
+  "updated_at": "2026-10-05T07:24:40.9931636Z"
 }

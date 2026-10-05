@@ -29,8 +29,8 @@ Upgrade/uninstall request graceful exit only from the installed executable path.
 
 The portable ZIP needs no installation but uses `%LOCALAPPDATA%\QuietPin` for settings by default. `--config-dir` supports a custom profile; global shortcut conflicts still apply across profiles.
 
-## Pending manual acceptance
+## Manual feedback and remaining coverage
 
-This is an unsigned MinGW prerelease. Pending areas include final installation/upgrade/uninstall, portable extraction into Chinese/space paths, real mixed-DPI multi-monitor movement and hot-plug, lock/unlock, virtual desktops, elevated windows, browser/Electron custom title bars, Explorer restart, actual sign-in startup, MSVC and two-hour stability. No universal Windows 11 application compatibility is claimed.
+The user confirmed manual testing passed and approved stable publication on 2026-10-05. The tested files are retained without rebuilding or rerunning final tests. This remains an unsigned MinGW build. The earlier record did not itemize coverage for final installation/upgrade/uninstall, portable extraction into Chinese/space paths, real mixed-DPI multi-monitor movement and hot-plug, lock/unlock, virtual desktops, elevated windows, browser/Electron custom title bars, Explorer restart, actual sign-in startup, MSVC and two-hour stability. No universal Windows 11 application compatibility is claimed.
 
 Pin probes an internal candidate at five points with bounded WM_NCHITTEST calls and requires HTCAPTION. It rechecks occupied geometry at mouse release. If no safe position is available, Pin hides and shortcuts remain usable. Static operation has no default polling loop; movement compensation runs at 33ms for at most five seconds per activation, and disabling Pin releases its windows, hooks, notification registration and timer.

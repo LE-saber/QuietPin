@@ -1,10 +1,10 @@
 # QuietPin 0.2
 
-[中文](https://github.com/LE-saber/QuietPin/blob/main/README.md) · **English**
+[中文](https://github.com/LE-saber/QuietPin/blob/main/README.zh.md) · **English**
 
 A lightweight always-on-top tool for Windows 11 x64, built with native C++20 and Win32. It runs in the background with no main window, console, taskbar button or tray icon by default. No .NET, Electron or additional runtime installation is required.
 
-v0.2 adds an optional Pin button and a per-user Windows installer. This is a **prerelease awaiting final manual acceptance**. The v0.1 release remains available.
+v0.2 adds an optional Pin button and a per-user Windows installer. **The user confirmed manual testing passed and approved v0.2.0 for stable release.** The v0.1 release remains available.
 
 [Release v0.2.0](https://github.com/LE-saber/QuietPin/releases/tag/v0.2.0) · [Changelog](https://github.com/LE-saber/QuietPin/blob/main/CHANGELOG.md) · [Verification and limitations](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.en.md)
 
@@ -78,7 +78,7 @@ QuietPin.exe --config-dir "C:\My QuietPin Profile"
 
 Configuration, policy, real Win32 window integration, mouse Pin/unpin, focus retention, movement, lifecycle and MSAA action-name checks have been run on the development machine. See the [verification record](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.en.md) for evidence and pending items.
 
-This is an **unsigned MinGW build**. Final installer/upgrade/uninstall and portable-path acceptance is left to manual testing, as requested. Real mixed-DPI multi-monitor behavior, display hot-plug, administrator targets, lock/unlock, virtual desktops, Explorer restart, sign-in startup, the browser/Electron application matrix, MSVC and two-hour stability have not completed acceptance.
+This is an **unsigned MinGW build**. On 2026-10-05, the user confirmed manual testing passed and approved stable publication. The tested installer and ZIP are retained without rebuilding. That feedback does not provide an itemized record for real mixed-DPI multi-monitor behavior, display hot-plug, administrator targets, lock/unlock, virtual desktops, Explorer restart, sign-in startup, the browser/Electron application matrix, MSVC or two-hour stability; broader platform validation remains tracked separately.
 
 Force termination or a crash may leave a target topmost. Restart QuietPin and toggle that window to undo it. Windows does not provide reliable ownership of topmost state when several tools change the same window; exit restoration is best effort.
 
