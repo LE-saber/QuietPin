@@ -2,6 +2,8 @@
 
 Windows 11 x64 轻量窗口置顶工具。原生 C++/Win32，不需要安装 .NET、Electron 或其他运行时。默认无主窗口、无控制台、无任务栏图标、无托盘图标。
 
+[下载 v0.1.0 便携包](https://github.com/LE-saber/QuietPin/releases/tag/v0.1.0) · [Pin 下一阶段技术计划](docs/pin-implementation-plan.zh-CN.md)。当前发布版不含 Pin；计划已完成，实施待后续指令。
+
 ## 开始使用
 
 解压完整便携包到固定目录，双击 **QuietPin.exe**。正常启动没有弹窗，直接后台运行。

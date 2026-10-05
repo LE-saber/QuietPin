@@ -8,17 +8,18 @@ Windows 11 轻量窗口置顶工具，C++20/原生 Win32 单 EXE，默认无托�
 
 ## Requirements
 ### Validated
-暂无已交付验证的能力。
+- v0.1 MVP 后台/热键置顶、设置/退出、配置/排除等能力已有本机自动验证；2026-10-05 用户明确反馈“测试成功”。
+- v0.1.0 已上传 GitHub 并发布便携包，标签基线 166d09b。真实平台缺口见验证文档，不因用户试用反馈全部标记完成。
 ### Active
-- [ ] 全局置顶快捷键、权限和系统窗口保护。
-- [ ] 设置、快捷键持久化、排除程序、中文/English、登录启动和退出。
-- [ ] 非激活状态提示、可选托盘。
-- [ ] 后续 Pin 按钮及多屏 DPI 兼容。
+- [ ] 阶段 4 默认关闭的 Pin、非激活点击、事件跟随、多屏/DPI 与安全位置。
+- [ ] 阶段 5 完整权限/Shell/应用矩阵、登录启动、托盘恢复与长期资源验证。
 ### Out of Scope
 账号、网络、遥测、更新服务、驱动、注入、透明度与画中画。
 
 ## Context
 完整设计：[技术文档](../docs/technical-design.zh-CN.md)。2026-10-05 用户已批准按文档初始化并继续开发，要求先交付 MVP。参考方案已检查，API 已通过 Context7 和官方原文核对。
+
+同日用户确认 MVP 测试成功，要求先上传至 https://github.com/LE-saber/QuietPin，再给出下一阶段 Pin 技术计划。本轮为计划工作，不自动执行阶段 4。
 
 ## Constraints
 - 原生 Windows 11 x64、低资源占用，无额外大型运行时。
@@ -37,4 +38,4 @@ Windows 11 轻量窗口置顶工具，C++20/原生 Win32 单 EXE，默认无托�
 ## Evolution
 阶段完成后更新验证需求、风险和关键决策；里程碑结束后重新检查范围及发布证据。未实际验证的性能与兼容要求不能标记完成。
 
-*Last updated: 2026-10-05 after user approval*
+*Last updated: 2026-10-05 after MVP acceptance and Pin planning*

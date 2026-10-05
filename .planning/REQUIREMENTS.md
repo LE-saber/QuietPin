@@ -35,7 +35,7 @@ Core Value: 无托盘后台下仍能稳定置顶与管理。
 - [x] **EXIT-01**: 退出清理与尽力撤销新增置顶
 
 ## MVP scope
-本次实现阶段 1–3；Pin 为后续阶段 4，完整平台矩阵/性能为阶段 5。MVP 验证记录在 docs/verification.zh-CN.md。
+阶段 1–3 的 MVP 已交付，2026-10-05 用户确认测试成功；v0.1.0 已发布 GitHub。阶段 4 Pin 已规划但未实现，完整平台矩阵/性能为阶段 5。MVP 验证记录在 docs/verification.zh-CN.md；用户反馈没有覆盖全部原有手工缺口。
 
 ## Out of Scope
 账号、联网更新、遥测、驱动、注入、透明度、画中画。
@@ -57,7 +57,7 @@ Core Value: 无托盘后台下仍能稳定置顶与管理。
 | CFG-05 | Phase 2 | MVP verified |
 | CFG-06 | Phase 2 | Implemented; manual coverage pending |
 | CFG-07 | Phase 3 | Implemented; manual coverage pending |
-| CFG-08 | Phase 4 | Pending |
+| CFG-08 | Phase 4 | Planned: 04-01/02/03; implementation pending |
 | CFG-09 | Phase 2 | MVP verified |
 | CFG-10 | Phase 2 | MVP verified |
 | UX-01 | Phase 3 | Implemented; manual coverage pending |
@@ -65,10 +65,10 @@ Core Value: 无托盘后台下仍能稳定置顶与管理。
 | TRAY-02 | Phase 3 | Implemented; manual coverage pending |
 | EXCL-01 | Phase 2 | MVP verified |
 | EXCL-02 | Phase 2 | MVP verified |
-| PIN-01 | Phase 4 | Pending |
-| PIN-02 | Phase 4 | Pending |
-| PIN-03 | Phase 4 | Pending |
-| PIN-04 | Phase 4 | Pending |
+| PIN-01 | Phase 4 | Planned: 04-01/03; implementation pending |
+| PIN-02 | Phase 4 | Planned: 04-02/03; implementation pending |
+| PIN-03 | Phase 4 | Planned: 04-02/03; implementation and real mixed-DPI validation pending |
+| PIN-04 | Phase 4 | Planned: 04-02/03; implementation pending |
 | COMPAT-01 | Phase 5 | Pending |
 | PERF-01 | Phase 5 | Pending |
 | EXIT-01 | Phase 3 | MVP verified |
