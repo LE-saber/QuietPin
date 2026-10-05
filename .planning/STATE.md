@@ -24,7 +24,7 @@ Next: 用户人工验收 v0.2；按反馈修复，再补双屏/混合 DPI/真实
 
 ## Delivery Baseline
 v0.1 MVP 已由用户确认测试成功，已发布 GitHub，固定提交 166d09b；原标签不动。
-v0.2 原生 C++20/Win32 Pin 默认关闭，事件跟随、安全标题探测、偏移重置、非激活点击、双语名称、生命周期已实现。dist 中有安装 EXE、ZIP、SHA256；Inno Setup 当前用户安装无需提权。用户已授权 GitHub 上传/版本发布；正在准备 v0.2.0 双语预发布，最终人工验收状态保持。
+v0.2 原生 C++20/Win32 Pin 默认关闭，事件跟随、安全标题探测、偏移重置、非激活点击、双语名称、生命周期已实现。dist 中有安装 EXE、ZIP、SHA256；Inno Setup 当前用户安装无需提权。v0.2.0 双语预发布已公开：https://github.com/LE-saber/QuietPin/releases/tag/v0.2.0 。标签固定 e6de3b8；安装 EXE、ZIP、SHA256 均上传，GitHub digest 与本地一致。最终人工验收状态保持，发布记录见 docs/releases/v0.2.0-publication.md。
 
 ## Evidence
 当前代理顺序开发/审查，没有独立代理。CTest 3/3 曾通过；独立 Pin 60 秒与 100 次启停通过；中英文设置截图检查通过。安装包编译及部分隔离安装检查已完成，最终安装/升级/卸载、便携回归按用户要求交人工验收。
