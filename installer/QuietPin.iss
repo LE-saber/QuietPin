@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.1"
+  #define AppVersion "0.2.0"
 #endif
 #ifndef SourceRoot
   #define SourceRoot ".."
@@ -57,14 +57,16 @@ Type: files; Name: "{group}\Uninstall QuietPin.lnk"
 Type: files; Name: "{group}\QuietPin 设置.lnk"
 Type: files; Name: "{group}\退出 QuietPin.lnk"
 Type: files; Name: "{group}\卸载 QuietPin.lnk"
+Type: files; Name: "{app}\verification-v0.2.0.zh-CN.md"
+Type: files; Name: "{app}\verification-v0.2.0.en.md"
+Type: files; Name: "{app}\technical-design.zh-CN.md"
+Type: files; Name: "{app}\pin-implementation-plan.zh-CN.md"
+Type: files; Name: "{app}\language-settings.md"
 [Files]
 Source: "{#BinaryPath}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\README.zh.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceRoot}\docs\verification-v0.2.0.zh-CN.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceRoot}\docs\verification-v0.2.0.en.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceRoot}\docs\language-settings.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\open-settings.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\exit.cmd"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]

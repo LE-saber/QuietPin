@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "WindowOps.h"
 #include "PinController.h"
+#include "UpdateChecker.h"
 #include <wtsapi32.h>
 #include <commctrl.h>
 #include <commdlg.h>
@@ -15,12 +16,12 @@ namespace {
 constexpr wchar_t HostClass[]=L"QuietPin.Host.v1";
 constexpr wchar_t SettingsClass[]=L"QuietPin.Settings.v1";
 constexpr wchar_t StatusClass[]=L"QuietPin.Status.v1";
-constexpr UINT ManageMessage=WM_APP+1, TrayMessage=WM_APP+2, ForegroundMessage=WM_APP+3, PinMessage=WM_APP+4;
+constexpr UINT ManageMessage=WM_APP+1, TrayMessage=WM_APP+2, ForegroundMessage=WM_APP+3, PinMessage=WM_APP+4, UpdateMessage=WM_APP+5;
 constexpr UINT_PTR ConfirmTimer=1, HideTimer=2, QuitTimer=3;
 constexpr int SettingsKeyId=2, ExitKeyId=3;
 constexpr Hotkey SettingsHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'T'};
 constexpr Hotkey ExitHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'Q'};
-enum Control { Ctrl=100,Alt,Shift,Win,Key,ShowStatus,ShowTray,Startup,Language,Exclusions,Save,Close,Quit,Browse,Result,ShowPin,PinX,PinY,PinReset };
+enum Control { Ctrl=100,Alt,Shift,Win,Key,ShowStatus,ShowTray,Startup,Language,Exclusions,Save,Close,Quit,Browse,Result,ShowPin,PinX,PinY,PinReset,CheckUpdates,Download };
 
 // Stable per-config identity; default remains one instance per user session.
 std::wstring profileTag(const std::filesystem::path& dir) {
@@ -52,6 +53,7 @@ public:
     HICON icon=nullptr;
     HANDLE mutex=nullptr;
     WindowEventMonitor monitor;
+    UpdateChecker updater;
     std::unique_ptr<PinController> pin;
     std::optional<Identity> recent;
     std::vector<Identity> managed;
@@ -72,6 +74,7 @@ public:
         marker=L"QuietPin.Managed."+std::to_wstring(GetCurrentProcessId());
     }
     ~App() {
+        updater.stop();
         pin.reset(); monitor.stop();
         if(trayAdded) removeTray();
         if(statusWindow && IsWindow(statusWindow)) DestroyWindow(statusWindow);
@@ -261,6 +264,8 @@ public:
         SendMessageW(lang,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"中文"));
         SendMessageW(lang,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(L"English"));
         SendMessageW(lang,CB_SETCURSEL,settings.chinese?0:1,0);
+        control(L"BUTTON",tr(L"检查更新",L"Check for updates"),BS_PUSHBUTTON|WS_TABSTOP,CheckUpdates,330,232,142,29,dpi);
+        control(L"BUTTON",tr(L"下载页面",L"Download page"),BS_PUSHBUTTON|WS_TABSTOP,Download,486,232,130,29,dpi);
         control(L"STATIC",tr(L"排除程序：每行一个完整 EXE 路径或文件名（例如 chrome.exe）",
                             L"Excluded apps: one full EXE path or file name per line (e.g. chrome.exe)"),0,0,20,272,600,36,dpi);
         std::wstring rules; for(const auto& rule:settings.excluded) rules+=rule+L"\r\n";
@@ -282,7 +287,30 @@ public:
         control(L"BUTTON",tr(L"保存",L"Save"),BS_DEFPUSHBUTTON|WS_TABSTOP,Save,20,640,105,34,dpi);
         control(L"BUTTON",tr(L"关闭设置",L"Close settings"),BS_PUSHBUTTON|WS_TABSTOP,Close,140,640,155,34,dpi);
         control(L"BUTTON",tr(L"退出 QuietPin",L"Exit QuietPin"),BS_PUSHBUTTON|WS_TABSTOP,Quit,455,640,161,34,dpi);
+        updateFeedback();
         SetFocus(GetDlgItem(ui,Ctrl));
+    }
+    void updateFeedback() {
+        const auto update=updater.result();
+        std::wstring message;
+        switch(update.status) {
+        case UpdateStatus::Idle: break;
+        case UpdateStatus::Checking: message=tr(L"正在连接 GitHub 检查更新…",L"Connecting to GitHub to check for updates…"); break;
+        case UpdateStatus::Current: message=tr(L"已是最新发布文件：v",L"You have the current release build: v")+update.version; break;
+        case UpdateStatus::NewVersion: message=tr(L"发现新版本：v",L"New version available: v")+update.version+tr(L"。点击“下载页面”获取。",L". Open Download page to get it."); break;
+        case UpdateStatus::DifferentBuild: message=tr(L"v",L"v")+update.version+tr(L" 发布文件与当前程序不同。请到下载页面查看。",L" release files differ from this copy. Review the Download page."); break;
+        case UpdateStatus::Unverified: message=tr(L"GitHub 最新版本：v",L"Latest GitHub version: v")+update.version+tr(L"；无法核对当前构建，可到下载页面查看。",L"; build comparison unavailable. Review the Download page."); break;
+        case UpdateStatus::Failed: message=tr(L"无法检查更新。请检查网络连接，稍后重试，或打开下载页面。",L"Unable to check for updates. Check your connection and retry, or open the Download page."); break;
+        }
+        if(!message.empty()) lastResult=std::move(message);
+        if(ui) {
+            EnableWindow(GetDlgItem(ui,CheckUpdates),update.status!=UpdateStatus::Checking);
+            SetWindowTextW(GetDlgItem(ui,Result),lastResult.c_str());
+        }
+    }
+    void openDownloadPage() {
+        if(reinterpret_cast<INT_PTR>(ShellExecuteW(ui,L"open",DownloadPage,nullptr,nullptr,SW_SHOWNORMAL))<=32)
+            result(tr(L"无法打开浏览器，请访问 github.com/LE-saber/QuietPin/releases。",L"Unable to open your browser. Visit github.com/LE-saber/QuietPin/releases."),true);
     }
     void checkbox(int id,const wchar_t* label,bool checked,int y,UINT dpi) {
         auto c=control(L"BUTTON",label,BS_AUTOCHECKBOX|WS_TABSTOP,id,20,y,596,28,dpi);
@@ -311,7 +339,7 @@ public:
         if(exiting) return;
         if(pin) pin->suspend(true);
         if(!ui) {
-            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · 0.2.1",L"QuietPin Settings · 0.2.1"),
+            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · 0.2.0",L"QuietPin Settings · 0.2.0"),
                 WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VSCROLL,0,0,640,640,host,nullptr,GetModuleHandleW(nullptr),this);
             if(!ui) { if(pin) pin->suspend(false); return; }
             resizeSettings(GetDpiForWindow(ui)); buildControls();
@@ -402,6 +430,7 @@ public:
     void beginExit() {
         if(exiting) return;
         exiting=true; hideStatus();
+        updater.stop();
         if(ui) ShowWindow(ui,SW_HIDE);
         if(toggleRegistered) UnregisterHotKey(host,toggleId);
         if(settingsRegistered) UnregisterHotKey(host,SettingsKeyId);
@@ -451,6 +480,7 @@ public:
             return 0;
         }
         case PinMessage: if(!exiting) monitor.refresh(); return 0;
+        case UpdateMessage: if(!exiting) updateFeedback(); return 0;
         case WM_WTSSESSION_CHANGE:
             if(pin) {
                 if(w==WTS_SESSION_LOCK || w==WTS_CONSOLE_DISCONNECT || w==WTS_REMOTE_DISCONNECT || w==WTS_SESSION_LOGOFF) pin->session(false);
@@ -492,6 +522,8 @@ LRESULT CALLBACK settingsProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l) noexcept {
             else if(LOWORD(w)==Close || LOWORD(w)==IDCANCEL) DestroyWindow(hwnd);
             else if(LOWORD(w)==Quit) app->beginExit();
             else if(LOWORD(w)==Browse) app->browse();
+            else if(LOWORD(w)==CheckUpdates) { app->updater.start(app->host,UpdateMessage); app->updateFeedback(); }
+            else if(LOWORD(w)==Download) app->openDownloadPage();
             else if(LOWORD(w)==ShowPin) {
                 bool enabled=app->checked(ShowPin); EnableWindow(GetDlgItem(hwnd,PinX),enabled); EnableWindow(GetDlgItem(hwnd,PinY),enabled); EnableWindow(GetDlgItem(hwnd,PinReset),enabled);
             } else if(LOWORD(w)==PinReset) { SetWindowTextW(GetDlgItem(hwnd,PinX),L"0"); SetWindowTextW(GetDlgItem(hwnd,PinY),L"0"); }
