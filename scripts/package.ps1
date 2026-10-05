@@ -22,7 +22,7 @@ Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $release 'QuietP
 foreach($name in @('open-settings.cmd','exit.cmd')){
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $release -Force
 }
-foreach($name in @('README.md','README.en.md','CHANGELOG.md')){
+foreach($name in @('README.md','README.zh.md','CHANGELOG.md')){
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $release -Force
 }
 foreach($name in @('verification-v0.2.0.zh-CN.md','verification-v0.2.0.en.md','technical-design.zh-CN.md','pin-implementation-plan.zh-CN.md')){
