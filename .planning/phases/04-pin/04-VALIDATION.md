@@ -1,9 +1,9 @@
 ---
 phase: "4"
 slug: "pin"
-status: draft
+status: human_needed
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-10-05"
 ---
 
@@ -21,15 +21,15 @@ created: "2026-10-05"
 ## Per-Task Verification Map
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 04-01-01 | 01 | 1 | CFG-08 | config/core | build.ps1 -Compiler MinGW | pending |
-| 04-01-02 | 01 | 1 | PIN-01 | real input/integration | build.ps1 -Compiler MinGW | pending |
-| 04-01-03 | 01 | 1 | CFG-08, PIN-01 | lifecycle/integration | ctest --test-dir build --output-on-failure | pending |
-| 04-02-01 | 02 | 2 | PIN-03, PIN-04, CFG-08 | geometry/config | build.ps1 -Compiler MinGW | pending |
-| 04-02-02 | 02 | 2 | PIN-02, PIN-04 | lifecycle/integration | build.ps1 -Compiler MinGW | pending |
-| 04-02-03 | 02 | 2 | PIN-02, PIN-03, PIN-04 | integration + manual | ctest --test-dir build --output-on-failure | pending |
-| 04-03-01 | 03 | 3 | PIN-01, CFG-08 | focus/race/integration | build.ps1 -Compiler MinGW | pending |
-| 04-03-02 | 03 | 3 | PIN-01–04 | regression + perf/manual | ctest --test-dir build --output-on-failure | pending |
-| 04-03-03 | 03 | 3 | CFG-08, PIN-01–04 | package + extracted integration | package.ps1 | pending |
+| 04-01-01 | 01 | 1 | CFG-08 | config/core | build.ps1 -Compiler MinGW | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-01-02 | 01 | 1 | PIN-01 | real input/integration | build.ps1 -Compiler MinGW | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-01-03 | 01 | 1 | CFG-08, PIN-01 | lifecycle/integration | ctest --test-dir build --output-on-failure | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-02-01 | 02 | 2 | PIN-03, PIN-04, CFG-08 | geometry/config | build.ps1 -Compiler MinGW | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-02-02 | 02 | 2 | PIN-02, PIN-04 | lifecycle/integration | build.ps1 -Compiler MinGW | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-02-03 | 02 | 2 | PIN-02, PIN-03, PIN-04 | integration + manual | ctest --test-dir build --output-on-failure | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-03-01 | 03 | 3 | PIN-01, CFG-08 | focus/race/integration | build.ps1 -Compiler MinGW | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-03-02 | 03 | 3 | PIN-01–04 | regression + perf/manual | ctest --test-dir build --output-on-failure | automated evidence recorded; manual gaps see VERIFICATION |
+| 04-03-03 | 03 | 3 | CFG-08, PIN-01–04 | package + extracted integration | package.ps1 | automated evidence recorded; manual gaps see VERIFICATION |
 
 ## Wave 0 Requirements
 无需安装基础设施。新增用例须与被测功能同 task 落地：core_tests 的 Pin 配置/几何用例、integration 的真实鼠标/焦点/竞争用例；没有预写空壳。运行时证据全部待开发后采集，不能把当前 green MVP 推断为 Pin 测试 green。
@@ -50,4 +50,5 @@ created: "2026-10-05"
 - [ ] 实机多屏和必测人工项通过。
 - [ ] 运行时验证完成后再设置 nyquist_compliant。
 
-Approval: 计划结构审查完成；运行验证 pending。独立代理评审未执行。
+Approval: 自动证据见 SUMMARY/VERIFICATION；用户要求停止最终自动测试、改为人工验收。混合 DPI 等待验，nyquist_compliant 保留 false；独立代理评审未执行。
+

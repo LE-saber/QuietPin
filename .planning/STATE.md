@@ -3,42 +3,32 @@ gsd_state_version: "1.0"
 milestone: v0.2
 current_phase: 4
 current_phase_name: Pin
-status: executing
-last_updated: "2026-10-05T04:57:27.150Z"
-state_head: 1762b66b02ad34244030b9a1271a5dc6d0d73991
+status: awaiting_human_verification
+last_updated: "2026-10-05"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 4
 ---
 
 # Project State
 
 ## Project Reference
-
-See PROJECT.md; updated 2026-10-05.
-Core value: 无托盘仍能稳定置顶与管理/退出。
+See PROJECT.md / ROADMAP.md. Core value: 无托盘仍能稳定置顶与管理/退出。
 
 ## Current Position
-
-Phase: 4 (Pin) — READY TO EXECUTE
-Status: Ready to execute
-Plans: 3 plans / 3 sequential waves, 0 executed.
-Next: 按 04-01 → 04-02 → 04-03 实施；本轮用户仅要求上传与计划，不自动开发。
+Phase: 4 (Pin) — v0.2 candidate delivered; awaiting human verification.
+Plans: 3/3 implementation summaries produced. User requested Windows installer + portable ZIP and explicitly stopped final automated testing in favor of manual tests.
+Next: 用户人工验收 v0.2；按反馈修复，再补双屏/混合 DPI/真实应用矩阵及阶段 5。
 
 ## Delivery Baseline
+v0.1 MVP 已由用户确认测试成功，已发布 GitHub，固定提交 166d09b；原标签不动。
+v0.2 原生 C++20/Win32 Pin 默认关闭，事件跟随、安全标题探测、偏移重置、非激活点击、双语名称、生命周期已实现。dist 中有安装 EXE、ZIP、SHA256；Inno Setup 当前用户安装无需提权。尚未上传新二进制。
 
-2026-10-05 用户确认 MVP “测试成功”。源码已上传 https://github.com/LE-saber/QuietPin ，便携包发布 https://github.com/LE-saber/QuietPin/releases/tag/v0.1.0 。v0.1.0 固定提交 166d09b，ZIP SHA256 e1707a29c01c88cd133ad45122811ea1fc4ec084377a53d9161526a072e75e3c；GitHub 资产 digest 与本地一致。用户试用不替代既有未验平台矩阵。
+## Evidence
+当前代理顺序开发/审查，没有独立代理。CTest 3/3 曾通过；独立 Pin 60 秒与 100 次启停通过；中英文设置截图检查通过。安装包编译及部分隔离安装检查已完成，最终安装/升级/卸载、便携回归按用户要求交人工验收。
+EXE 1,276,416 字节；默认 60 秒 CPU 增量分辨率内为 0，私有内存约 1.84 MiB；Pin 60 秒 CPU 0.109375 秒，私有内存约 2.96 MiB，略超初始 0.1 秒 CPU 预算，阶段 5 继续采样。
 
-## Last Activity
-
-2026-10-05：上传 MVP 源码/标签/ZIP/校验文件；依据批准技术文档完成阶段 4 CONTEXT/RESEARCH、三份 PLAN、VALIDATION 与可读技术计划。3/3 计划格式/结构通过，5/5 需求、10/10 决策覆盖；当前会话审查，无独立代理审查。本轮不改生产代码、不重新打包。
-
-## Decisions
-
-顺序开发、Git 跟踪、保留验证。Pin 默认关闭、非激活点击、事件驱动、overlay 自身 DPI、安全位置与旧配置兼容。自动推进服从当前用户范围：此次结束于计划，不进入执行。main 分支承载后续文档，v0.1.0 标签固定。
-
-## Risks
-
-本机 MinGW 构建与 2/2 自动测试通过；MSVC 未验证。多屏/真实管理员窗口/Explorer 重启/实际登录/长时间稳定性在后续实测。最终 EXE 1.194 MiB，60 秒空闲 Private Bytes 约 1.65 MiB、1 线程，CPU 时间增量在采样分辨率内为零。
+## Risks and Decisions
+PIN-03 真实双屏/混合 DPI 待验；PIN-04 应用矩阵待验。MSVC、签名、锁屏/虚拟桌面、管理员目标、实际登录、Explorer 重启、两小时性能保留。不得将构建/夹具通过当作所有 Windows 11 程序兼容。用户 2026-10-05 指令“不需要你最终测试，构建好了人工测试”优先于计划中的最终自动验证要求。

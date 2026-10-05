@@ -1,12 +1,12 @@
-# QuietPin MVP 0.1
+# QuietPin 0.2
 
 Windows 11 x64 轻量窗口置顶工具。原生 C++/Win32，不需要安装 .NET、Electron 或其他运行时。默认无主窗口、无控制台、无任务栏图标、无托盘图标。
 
-[下载 v0.1.0 便携包](https://github.com/LE-saber/QuietPin/releases/tag/v0.1.0) · [Pin 下一阶段技术计划](docs/pin-implementation-plan.zh-CN.md)。当前发布版不含 Pin；计划已完成，实施待后续指令。
+v0.2 包含可选 Pin 按钮，同时提供 Windows 安装 EXE 和便携 ZIP。[Pin 技术方案](docs/pin-implementation-plan.zh-CN.md) · [v0.2 验证记录](docs/verification-v0.2.0.zh-CN.md)。v0.1 历史发布保留。
 
 ## 开始使用
 
-解压完整便携包到固定目录，双击 **QuietPin.exe**。正常启动没有弹窗，直接后台运行。
+安装版：运行 **QuietPinSetup-v0.2.0-win-x64.exe**，默认安装到当前用户目录，无需管理员权限；开始菜单可打开设置、退出或卸载。便携版：解压 **QuietPin-v0.2.0-win-x64.zip** 到固定目录，双击 **QuietPin.exe**。正常启动直接后台运行。
 
 | 操作 | 默认快捷键 |
 | --- | --- |
@@ -29,7 +29,7 @@ Windows 11 x64 轻量窗口置顶工具。原生 C++/Win32，不需要安装 .NE
 - 保护桌面、任务栏及 Shell 特殊窗口；普通权限下拒绝受限窗口，不自动提权。
 - 单实例运行；正常退出时尽力撤销本实例添加的置顶。
 
-**Pin 按钮尚未包含在 MVP 中。** 设置显示说明，不提供无效开关。设置和退出快捷键在本版固定；只有置顶快捷键可修改。
+**Pin 默认关闭。** 在设置中勾选“显示活动窗口 Pin 按钮”并保存。按钮优先位于标题栏上方，点击切换置顶，不抢焦点。支持水平/垂直位置偏移和恢复默认位置。窄窗、全屏、自绘标题区或其他没有安全位置的情形会隐藏按钮，此时继续使用快捷键。设置和退出快捷键在本版固定；只有置顶快捷键可修改。
 
 ## 设置与启动
 
@@ -54,11 +54,11 @@ QuietPin.exe --startup
 
 高级用途：`--config-dir "C:\某目录"` 使用独立配置与实例身份，主要用于隔离测试。不同配置实例仍不能占用相同全局快捷键，日常使用不需要此参数。
 
-## MVP 验证与边界
+## 验证与边界
 
-已在本机 Windows 11 x64 构建并执行配置/策略测试及 Win32 真实窗口集成测试，包含真实 SendInput 热键、焦点保持、单实例、冲突回滚、语言/排除持久化、退出快捷键和正常退出清理。详见 `verification.zh-CN.md`。
+已在本机 Windows 11 x64 构建并执行配置/策略测试及 Win32 真实窗口集成测试，包含真实 SendInput 热键、焦点保持、单实例、冲突回滚、语言/排除持久化、退出快捷键和正常退出清理。Pin 增量验证详见 `verification-v0.2.0.zh-CN.md`。
 
-这是 **MinGW 构建的未签名 MVP**。尚未完成管理员窗口实机矩阵、Explorer 重启、所有常见应用、多屏/混合 DPI、登录后启动及两小时稳定性验收。MSVC 发布构建也未在此机器上验证。不自动修改 UAC 或要求管理员权限。
+这是 **MinGW 构建的未签名 v0.2**。尚未完成管理员窗口实机矩阵、Explorer 重启、所有常见应用、多屏/混合 DPI、登录后启动及两小时稳定性验收。MSVC 发布构建也未在此机器上验证。不自动修改 UAC 或要求管理员权限。
 
 强制结束/崩溃可能留下目标窗口的置顶状态；重启工具后对该窗口按置顶快捷键即可取消。与其他置顶工具同时运行时，Windows 不提供可靠的状态所有权，退出恢复只能尽力执行。
 
@@ -75,4 +75,7 @@ QuietPin.exe --startup
 
 运行测试：`ctest --test-dir build --output-on-failure`。测量默认空闲模式：`.\scripts\measure-idle.ps1 -Seconds 60`。
 
-便携包内附 `technical-design.zh-CN.md` 与 `verification.zh-CN.md`。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
+安装包通过 Inno Setup 6.7+ 构建：`.\scripts\package.ps1 -InnoCompiler "C:\路径\ISCC.exe"`。打包脚本检查 EXE 版本，同时生成安装 EXE、便携 ZIP 和 SHA256 校验文件。`--exit-if-owned` 是安装升级/卸载使用的管理参数，只退出与命令 EXE 路径相同的实例，并等待清理完成。
+
+便携包内附 `technical-design.zh-CN.md` 与 `verification-v0.2.0.zh-CN.md`。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
+

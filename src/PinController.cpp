@@ -10,7 +10,7 @@ constexpr UINT_PTR MoveTimer=40;
 PinController::PinController(HWND host,UINT message,WindowEventMonitor& monitor,const Settings& settings,
     std::function<void(HWND)> toggle,std::function<bool()> busy):host_(host),refreshMessage_(message),monitor_(monitor),settings_(settings),
     toggle_(std::move(toggle)),busy_(std::move(busy)) {
-    overlay_.setActions([this]{press();},[this](bool inside){release(inside);},[this]{monitor_.refresh();});
+    overlay_.setActions([this]{press();},[this](bool inside){release(inside);},[this]{probeKnown_=false; monitor_.refresh();});
 }
 PinController::~PinController() { stop(); }
 void PinController::clear() {
@@ -45,6 +45,11 @@ void PinController::release(bool inside) {
        GetForegroundWindow()!=gesture->hwnd || !sameWindow(*gesture)) return;
     auto checked=inspectWindow(gesture->hwnd,settings_);
     if(!checked.window || checked.window->pid!=gesture->pid || checked.window->tid!=gesture->tid) { clear(); return; }
+    // A custom title bar can change its hit regions without moving the window.
+    // Recheck the actual occupied rectangle at release before performing an action.
+    probeKnown_=false;
+    RECT safe{},shown{}; GetWindowRect(overlay_.window(),&shown);
+    if(!layout(safe) || !EqualRect(&safe,&shown) || GetForegroundWindow()!=gesture->hwnd) { overlay_.hide(); return; }
     toggle_(gesture->hwnd); monitor_.refresh();
 }
 bool PinController::layout(RECT& r) {

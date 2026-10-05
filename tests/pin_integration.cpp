@@ -2,9 +2,11 @@
 #include "WindowOps.h"
 #include <oleacc.h>
 #include <dwmapi.h>
+#include <psapi.h>
 #include <iostream>
 #include <functional>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace qp;
 static void check(bool ok,const char* label) { if(!ok) throw std::runtime_error(label); }
@@ -35,21 +37,24 @@ static void activate(HWND h) {
     check(waitFor([&]{return GetForegroundWindow()==h;}),"test target activation");
 }
 static void mouse(HWND h,DWORD flags) {
-    RECT r{}; GetWindowRect(h,&r); SetCursorPos((r.left+r.right)/2,(r.top+r.bottom)/2);
-    POINT point{(r.left+r.right)/2,(r.top+r.bottom)/2};
-    check(waitFor([&]{return WindowFromPoint(point)==h;}),"mouse actually hits Pin");
+    check(waitFor([&]{RECT r{}; GetWindowRect(h,&r); POINT point{(r.left+r.right)/2,(r.top+r.bottom)/2};
+        SetCursorPos(point.x,point.y);return IsWindowVisible(h) && WindowFromPoint(point)==h;}),"mouse actually hits Pin");
     INPUT i{}; i.type=INPUT_MOUSE; i.mi.dwFlags=flags;
     check(SendInput(1,&i,sizeof(i))==1,"real mouse input");
     messages();
 }
-static void click(HWND h) { mouse(h,MOUSEEVENTF_LEFTDOWN); waitFor([]{return false;},50); mouse(h,MOUSEEVENTF_LEFTUP); }
+static void click(HWND h) {
+    // Wait out DWM's activation/restore animation before a stationary gesture.
+    waitFor([]{return false;},300);
+    mouse(h,MOUSEEVENTF_LEFTDOWN); waitFor([]{return false;},50); mouse(h,MOUSEEVENTF_LEFTUP);
+}
 static LRESULT CALLBACK targetProc(HWND h,UINT msg,WPARAM w,LPARAM l) { return DefWindowProcW(h,msg,w,l); }
 int wmain(int count,wchar_t** args) {
     HANDLE process=nullptr; HWND host=nullptr,target=nullptr,other=nullptr; DWORD pid=0;
     HWND previous=GetForegroundWindow(); POINT cursor{}; GetCursorPos(&cursor);
     auto dir=std::filesystem::temp_directory_path()/(L"QuietPin-pin-test-"+std::to_wstring(GetCurrentProcessId()));
     try {
-        check(count==2,"exe argument");
+        check(count==2 || count==3,"exe argument");
         SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         std::wstring exe=std::filesystem::absolute(args[1]).wstring(),error;
         Settings settings; settings.status=false; settings.chinese=false; settings.toggle={MOD_CONTROL|MOD_ALT|MOD_SHIFT,VK_F8};
@@ -76,6 +81,7 @@ int wmain(int count,wchar_t** args) {
         check(!IsWindowVisible(pin),"Pin hidden during Settings");
         SendMessageW(ui,WM_CLOSE,0,0); activate(target);
         check(waitFor([&]{return IsWindowVisible(pin);}),"Pin visible for active target");
+        waitFor([]{return false;},250);
         check((GetWindowLongPtrW(pin,GWL_EXSTYLE)&(WS_EX_TOOLWINDOW|WS_EX_NOACTIVATE))==(WS_EX_TOOLWINDOW|WS_EX_NOACTIVATE),"Pin nonactivation styles");
         click(pin);
         if(!waitFor([&]{return isTopmost(target);})) {
@@ -86,12 +92,14 @@ int wmain(int count,wchar_t** args) {
         waitFor([]{return false;},120);
         click(pin); check(waitFor([&]{return !isTopmost(target);}),"Pin true mouse unpins");
         check(GetForegroundWindow()==target && GetFocus()==target,"unpin keeps focus");
+        check(waitFor([&]{wchar_t label[128]{}; GetWindowTextW(pin,label,128); return wcscmp(label,L"Pin this window")==0;}),"Pin confirmation completes before accessibility query");
         constexpr IID accessibleId{0x618736e0,0x3c3d,0x11cf,{0x81,0x0c,0x00,0xaa,0x00,0x38,0x9b,0x71}};
         IAccessible* accessible=nullptr;
         check(SUCCEEDED(AccessibleObjectFromWindow(pin,OBJID_CLIENT,accessibleId,reinterpret_cast<void**>(&accessible))),"MSAA object available");
         VARIANT self{}; self.vt=VT_I4; self.lVal=CHILDID_SELF; BSTR name=nullptr;
         auto named=accessible->get_accName(self,&name);
         bool correct=SUCCEEDED(named) && name && wcscmp(name,L"Pin this window")==0;
+        if(!correct) std::wcerr<<L"MSAA name="<<(name?name:L"<null>")<<L" HRESULT="<<named<<L"\n";
         SysFreeString(name); accessible->Release(); check(correct,"MSAA action name matches real unpinned state");
         RECT before{}; GetWindowRect(pin,&before);
         SetWindowPos(target,nullptr,220,210,720,340,SWP_NOZORDER|SWP_NOACTIVATE);
@@ -104,8 +112,31 @@ int wmain(int count,wchar_t** args) {
         check(waitFor([&]{RECT r{};GetWindowRect(pin,&r);return !IsWindowVisible(pin) || r.top!=before.top;}),"maximized geometry updates or safely hides");
         ShowWindow(target,SW_RESTORE); activate(target);
         check(waitFor([&]{return IsWindowVisible(pin);}),"restore after maximize");
+        auto style=GetWindowLongPtrW(target,GWL_STYLE);
+        MONITORINFO monitor{sizeof(monitor),{},{},0}; GetMonitorInfoW(MonitorFromWindow(target,MONITOR_DEFAULTTONEAREST),&monitor);
+        SetWindowLongPtrW(target,GWL_STYLE,WS_POPUP|WS_VISIBLE);
+        SetWindowPos(target,nullptr,monitor.rcMonitor.left,monitor.rcMonitor.top,monitor.rcMonitor.right-monitor.rcMonitor.left,
+            monitor.rcMonitor.bottom-monitor.rcMonitor.top,SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED);
+        check(waitFor([&]{return !IsWindowVisible(pin);}),"borderless fullscreen hides Pin");
+        SetWindowLongPtrW(target,GWL_STYLE,style); SetWindowPos(target,nullptr,220,210,720,340,SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED);
+        activate(target); check(waitFor([&]{return IsWindowVisible(pin);}),"return from fullscreen");
+        RECT clientRect{}; GetWindowRect(target,&clientRect);
+        SetCursorPos(clientRect.left+100,clientRect.top+120);
+        waitFor([]{return false;},2000);
+        FILETIME created{},exited{},kernel{},user{}; GetProcessTimes(process,&created,&exited,&kernel,&user);
+        auto ticks=[](FILETIME t){return (static_cast<ULONGLONG>(t.dwHighDateTime)<<32)|t.dwLowDateTime;};
+        auto cpu=ticks(kernel)+ticks(user); DWORD handles=0; GetProcessHandleCount(process,&handles);
+        PROCESS_MEMORY_COUNTERS_EX memory{}; memory.cb=sizeof(memory); GetProcessMemoryInfo(process,reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory),sizeof(memory));
+        int sample=count==3?60000:1000;
+        waitFor([]{return false;},sample);
+        GetProcessTimes(process,&created,&exited,&kernel,&user);
+        std::cout<<"PIN_IDLE: seconds="<<sample/1000<<" CPU_seconds="<<(ticks(kernel)+ticks(user)-cpu)/10000000.0
+            <<" private_bytes="<<memory.PrivateUsage<<" working_set="<<memory.WorkingSetSize<<" handles="<<handles
+            <<" GDI="<<GetGuiResources(process,GR_GDIOBJECTS)<<" USER="<<GetGuiResources(process,GR_USEROBJECTS)<<"\n";
         mouse(pin,MOUSEEVENTF_LEFTDOWN); waitFor([]{return false;},40); activate(other);
-        waitFor([]{return false;},80); mouse(pin,MOUSEEVENTF_LEFTUP);
+        waitFor([]{return false;},80);
+        INPUT release{}; release.type=INPUT_MOUSE; release.mi.dwFlags=MOUSEEVENTF_LEFTUP;
+        check(SendInput(1,&release,sizeof(release))==1,"release cancelled gesture after target switch");
         waitFor([]{return false;},80); check(!isTopmost(target) && !isTopmost(other),"target switch cancels down/up gesture");
         activate(target); check(waitFor([&]{return IsWindowVisible(pin);}),"target rebinds");
         // Disabling Pin while Tray remains enabled must retain foreground subscription.
@@ -127,16 +158,54 @@ int wmain(int count,wchar_t** args) {
         auto exclusions=launch(exe,options+L" --settings"); WaitForSingleObject(exclusions.hProcess,3000); CloseHandle(exclusions.hProcess);
         check(waitFor([&]{ui=find(pid,L"QuietPin.Settings.v1");return ui && IsWindowVisible(ui);}),"exclusions settings");
         SendMessageW(GetDlgItem(ui,109),WM_SETTEXT,0,reinterpret_cast<LPARAM>(L"")); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        // Keep the configuration fixture alive but remove its repaint/hover churn
+        // from the measurement of Pin's repeated allocation and teardown.
+        ShowWindow(ui,SW_HIDE);
+        waitFor([]{return false;},150);
+        DWORD initialGdi=0,initialUser=0,initialHandles=0;
+        auto resourceFloor=[&](DWORD kind) {
+            DWORD minimum=MAXDWORD;
+            waitFor([&]{minimum=std::min(minimum,GetGuiResources(process,kind));return false;},800);
+            return minimum;
+        };
+        // Warm themed controls before comparing the following 100 full cycles.
+        for(int i=0;i<110;++i) {
+            if(i==10) {
+                waitFor([]{return false;},500);
+                initialGdi=resourceFloor(GR_GDIOBJECTS); initialUser=resourceFloor(GR_USEROBJECTS);
+                GetProcessHandleCount(process,&initialHandles);
+            }
+            SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_UNCHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+            check(find(pid,L"QuietPin.Pin.v1")==nullptr,"100-cycle disable destroys overlay");
+            SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+            check(find(pid,L"QuietPin.Pin.v1")!=nullptr,"100-cycle enable creates overlay");
+        }
+        waitFor([]{return false;},500);
+        DWORD finalHandles=0; GetProcessHandleCount(process,&finalHandles);
+        auto finalGdi=resourceFloor(GR_GDIOBJECTS),finalUser=resourceFloor(GR_USEROBJECTS);
+        std::cout<<"PIN_100_CYCLES: handles="<<initialHandles<<" -> "<<finalHandles<<" GDI="<<initialGdi<<" -> "<<finalGdi
+            <<" USER="<<initialUser<<" -> "<<finalUser<<"\n";
+        check(finalHandles<=initialHandles+3 && finalGdi<=initialGdi+2 && finalUser<=initialUser+2,"no linear GUI or handle leak across 100 cycles");
+        ShowWindow(ui,SW_SHOWNOACTIVATE);
         SendMessageW(GetDlgItem(ui,106),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
         SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_UNCHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
         check(waitFor([&]{return find(pid,L"QuietPin.Pin.v1")==nullptr;}),"Pin disabled destroys window");
         SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,106),BM_SETCHECK,BST_UNCHECKED,0);
         SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0); SendMessageW(ui,WM_CLOSE,0,0); activate(target);
         check(waitFor([&]{pin=find(pid,L"QuietPin.Pin.v1");return pin && IsWindowVisible(pin);}),"Pin works after Tray disabled");
-        click(pin); check(waitFor([&]{return isTopmost(target);}),"Pin after feature switches");
+        click(pin);
+        if(!waitFor([&]{return isTopmost(target);})) {
+            wchar_t label[128]{}; GetWindowTextW(pin,label,128);
+            std::wcerr<<L"Feature-switch Pin="<<label<<L" foreground="<<GetForegroundWindow()<<L" target="<<target<<L"\n";
+            throw std::runtime_error("Pin after feature switches");
+        }
         DestroyWindow(target); target=nullptr;
         activate(other); check(waitFor([&]{return IsWindowVisible(pin);}),"target close safely switches");
-        auto stop=launch(exe,options+L" --exit"); WaitForSingleObject(stop.hProcess,3000); CloseHandle(stop.hProcess);
+        auto copy=dir/L"another-path.exe"; std::filesystem::copy_file(exe,copy,std::filesystem::copy_options::overwrite_existing);
+        auto foreignExit=launch(copy.wstring(),options+L" --exit-if-owned");
+        check(WaitForSingleObject(foreignExit.hProcess,3000)==WAIT_OBJECT_0 && WaitForSingleObject(process,0)==WAIT_TIMEOUT,"owned exit preserves instance at another path");
+        CloseHandle(foreignExit.hProcess);
+        auto stop=launch(exe,options+L" --exit-if-owned"); check(WaitForSingleObject(stop.hProcess,6000)==WAIT_OBJECT_0,"owned exit waits for cleanup"); CloseHandle(stop.hProcess);
         check(waitFor([&]{return WaitForSingleObject(process,0)==WAIT_OBJECT_0;},3000),"no-tray exit");
         CloseHandle(process); process=nullptr;
         DestroyWindow(other); other=nullptr;
@@ -153,5 +222,6 @@ int wmain(int count,wchar_t** args) {
         std::cerr<<"FAIL: "<<e.what()<<"\n"; return 1;
     }
 }
+
 
 

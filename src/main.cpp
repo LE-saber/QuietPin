@@ -311,9 +311,9 @@ public:
         if(exiting) return;
         if(pin) pin->suspend(true);
         if(!ui) {
-            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · MVP 0.1",L"QuietPin Settings · MVP 0.1"),
+            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · 0.2",L"QuietPin Settings · 0.2"),
                 WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VSCROLL,0,0,640,640,host,nullptr,GetModuleHandleW(nullptr),this);
-            if(!ui) return;
+            if(!ui) { if(pin) pin->suspend(false); return; }
             resizeSettings(GetDpiForWindow(ui)); buildControls();
         }
         ShowWindow(ui,SW_RESTORE); SetForegroundWindow(ui);
@@ -556,13 +556,14 @@ bool registerClass(const wchar_t* name,WNDPROC proc) {
 
 int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int) {
     try {
-        bool settings=false,exit=false,startup=false; auto directory=defaultConfigDirectory();
+        bool settings=false,exit=false,startup=false,exitIfOwned=false; auto directory=defaultConfigDirectory();
         int count=0; LPWSTR* args=CommandLineToArgvW(GetCommandLineW(),&count);
         if(!args) return 1;
         for(int i=1;i<count;++i) {
             std::wstring arg=args[i];
             if(arg==L"--settings") settings=true;
             else if(arg==L"--exit") exit=true;
+            else if(arg==L"--exit-if-owned") { exit=true; exitIfOwned=true; }
             else if(arg==L"--startup") startup=true;
             else if(arg==L"--config-dir" && i+1<count) directory=std::filesystem::absolute(args[++i]).lexically_normal();
             else { LocalFree(args); MessageBoxW(nullptr,L"QuietPin [--settings | --exit | --startup] [--config-dir <directory>]",L"QuietPin",MB_OK|MB_ICONINFORMATION); return 2; }
@@ -579,8 +580,17 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int) {
                 HWND running=FindWindowW(HostClass,app.title.c_str());
                 if(running) {
                     DWORD pid=0; GetWindowThreadProcessId(running,&pid); AllowSetForegroundWindow(pid);
+                    HANDLE owned=nullptr;
+                    if(exitIfOwned) {
+                        owned=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,pid);
+                        wchar_t path[32768]{}; DWORD length=32768;
+                        bool matches=owned && QueryFullProcessImageNameW(owned,0,path,&length) && lower(path)==lower(executablePath().wstring());
+                        if(!matches) { if(owned) CloseHandle(owned); return 0; }
+                    }
                     DWORD_PTR reply=0;
-                    if(SendMessageTimeoutW(running,ManageMessage,exit?2:1,0,SMTO_ABORTIFHUNG|SMTO_BLOCK,1500,&reply)) return 0;
+                    bool sent=SendMessageTimeoutW(running,ManageMessage,exit?2:1,0,SMTO_ABORTIFHUNG|SMTO_BLOCK,1500,&reply)!=0;
+                    if(owned) { auto waited=sent?WaitForSingleObject(owned,5000):WAIT_FAILED; CloseHandle(owned); return waited==WAIT_OBJECT_0?0:3; }
+                    if(sent) return 0;
                     break;
                 }
                 Sleep(50);
