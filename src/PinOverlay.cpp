@@ -61,6 +61,7 @@ void PinOverlay::show(const RECT& rect,bool pinned,bool busy,bool chinese) {
     pinned_=pinned; busy_=busy; chinese_=chinese;
     if(changed) name();
     RECT old{}; GetWindowRect(window_,&old);
+    if(!EqualRect(&old,&rect) && pressed_) { cancel(); if(release_) release_(false); }
     if(!EqualRect(&old,&rect) || !IsWindowVisible(window_)) {
         if(!SetWindowPos(window_,HWND_TOPMOST,rect.left,rect.top,rect.right-rect.left,rect.bottom-rect.top,SWP_NOACTIVATE|SWP_SHOWWINDOW)) { hide(); return; }
         ShowWindow(window_,SW_SHOWNOACTIVATE);

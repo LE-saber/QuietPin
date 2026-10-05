@@ -1,7 +1,9 @@
 #include "PinController.h"
+#include "PinPlacement.h"
 #include <dwmapi.h>
 #include <wtsapi32.h>
 #include <algorithm>
+#include <limits>
 
 namespace qp {
 constexpr UINT_PTR MoveTimer=40;
@@ -13,6 +15,7 @@ PinController::PinController(HWND host,UINT message,WindowEventMonitor& monitor,
 PinController::~PinController() { stop(); }
 void PinController::clear() {
     ++epoch_; gesture_.reset(); overlay_.hide(); target_.reset(); monitor_.bind(nullptr,0);
+    probeKnown_=false;
     KillTimer(host_,MoveTimer); moving_=false;
 }
 void PinController::stop() {
@@ -30,38 +33,66 @@ bool PinController::apply() {
     monitor_.refresh(); return true;
 }
 void PinController::suspend(bool value) { suspended_=value; clear(); if(!value) monitor_.refresh(); }
+void PinController::session(bool available) { sessionBlocked_=!available; clear(); if(available) monitor_.refresh(); }
 void PinController::press() {
     gesture_.reset();
-    if(!target_ || suspended_ || busy_() || !sameWindow(*target_) || GetForegroundWindow()!=target_->hwnd) { overlay_.cancel(); return; }
+    if(!target_ || suspended_ || sessionBlocked_ || busy_() || !sameWindow(*target_) || GetForegroundWindow()!=target_->hwnd) { overlay_.cancel(); return; }
     gesture_=target_; gestureEpoch_=epoch_;
 }
 void PinController::release(bool inside) {
     auto gesture=gesture_; gesture_.reset();
-    if(!inside || !gesture || gestureEpoch_!=epoch_ || suspended_ || !settings_.pin || busy_() ||
+    if(!inside || !gesture || gestureEpoch_!=epoch_ || suspended_ || sessionBlocked_ || !settings_.pin || busy_() ||
        GetForegroundWindow()!=gesture->hwnd || !sameWindow(*gesture)) return;
     auto checked=inspectWindow(gesture->hwnd,settings_);
     if(!checked.window || checked.window->pid!=gesture->pid || checked.window->tid!=gesture->tid) { clear(); return; }
     toggle_(gesture->hwnd); monitor_.refresh();
 }
 bool PinController::layout(RECT& r) {
-    // Wave 1 conservative tracer: only outside the target, using overlay's own DPI.
-    RECT frame{};
-    if(FAILED(DwmGetWindowAttribute(target_->hwnd,DWMWA_EXTENDED_FRAME_BOUNDS,&frame,sizeof(frame))) && !GetWindowRect(target_->hwnd,&frame)) return false;
+    RECT frame{},windowRect{};
+    if(!GetWindowRect(target_->hwnd,&windowRect)) return false;
+    if(FAILED(DwmGetWindowAttribute(target_->hwnd,DWMWA_EXTENDED_FRAME_BOUNDS,&frame,sizeof(frame)))) frame=windowRect;
     MONITORINFO info{sizeof(info),{},{},0}; if(!GetMonitorInfoW(MonitorFromWindow(target_->hwnd,MONITOR_DEFAULTTONEAREST),&info)) return false;
     if(MonitorFromWindow(overlay_.window(),MONITOR_DEFAULTTONEAREST)!=MonitorFromWindow(target_->hwnd,MONITOR_DEFAULTTONEAREST)) {
         overlay_.hide(); SetWindowPos(overlay_.window(),nullptr,info.rcWork.left+8,info.rcWork.top+8,1,1,SWP_NOZORDER|SWP_NOACTIVATE);
     }
     UINT dpi=GetDpiForWindow(overlay_.window()); if(!dpi) return false;
-    int size=MulDiv(settings_.pinSize,dpi,96),gap=MulDiv(4,dpi,96);
-    int x=frame.right-MulDiv(160,dpi,96)+MulDiv(settings_.pinOffsetX,dpi,96);
-    int y=frame.top-gap-size+MulDiv(settings_.pinOffsetY,dpi,96);
-    r={x,y,x+size,y+size};
-    return frame.right-frame.left>=MulDiv(220,dpi,96) && r.left>=info.rcWork.left && r.right<=info.rcWork.right &&
-        r.top>=info.rcWork.top && r.bottom<=frame.top && r.bottom<=info.rcWork.bottom;
+    const auto style=GetWindowLongPtrW(target_->hwnd,GWL_STYLE);
+    bool coversMonitor=frame.left<=info.rcMonitor.left+2 && frame.top<=info.rcMonitor.top+2 &&
+        frame.right>=info.rcMonitor.right-2 && frame.bottom>=info.rcMonitor.bottom-2;
+    PinGeometry geometry{frame,info.rcWork,dpi,settings_.pinSize,settings_.pinOffsetX,settings_.pinOffsetY,
+        (style&WS_CAPTION)==WS_CAPTION,coversMonitor && !(IsZoomed(target_->hwnd) && (style&WS_CAPTION)==WS_CAPTION),std::nullopt};
+    RECT buttons{};
+    if(SUCCEEDED(DwmGetWindowAttribute(target_->hwnd,DWMWA_CAPTION_BUTTON_BOUNDS,&buttons,sizeof(buttons))) &&
+       buttons.right>buttons.left && buttons.bottom>buttons.top) {
+        OffsetRect(&buttons,windowRect.left,windowRect.top); geometry.captionButtons=buttons;
+    }
+    const auto candidates=pinCandidates(geometry);
+    const auto deadline=GetTickCount64()+50;
+    for(const auto& candidate:candidates) {
+        if(candidate.inside) {
+            if(!probeKnown_ || !EqualRect(&probeRect_,&candidate.rect)) {
+                probeRect_=candidate.rect; probeKnown_=true; probeSafe_=true;
+                const RECT& b=candidate.rect;
+                const POINT points[]={{b.left,b.top},{b.right-1,b.top},{b.left,b.bottom-1},{b.right-1,b.bottom-1},{(b.left+b.right)/2,(b.top+b.bottom)/2}};
+                for(auto point:points) {
+                    auto now=GetTickCount64(); DWORD_PTR hit=0;
+                    if(now>=deadline || point.x<std::numeric_limits<SHORT>::min() || point.x>std::numeric_limits<SHORT>::max() ||
+                       point.y<std::numeric_limits<SHORT>::min() || point.y>std::numeric_limits<SHORT>::max() ||
+                       !SendMessageTimeoutW(target_->hwnd,WM_NCHITTEST,0,MAKELPARAM(static_cast<SHORT>(point.x),static_cast<SHORT>(point.y)),
+                           SMTO_ABORTIFHUNG|SMTO_BLOCK|SMTO_ERRORONEXIT,static_cast<UINT>(std::min<ULONGLONG>(10,deadline-now)),&hit) || hit!=HTCAPTION) {
+                        probeSafe_=false; break;
+                    }
+                }
+            }
+            if(!probeSafe_) continue;
+        }
+        r=candidate.rect; return true;
+    }
+    return false;
 }
 void PinController::refresh(bool invalidate,bool moving) {
     if(invalidate) clear();
-    if(!settings_.pin || suspended_ || !overlay_.window()) { clear(); return; }
+    if(!settings_.pin || suspended_ || sessionBlocked_ || !overlay_.window()) { clear(); return; }
     HWND foreground=GetForegroundWindow();
     if(!target_ || target_->hwnd!=foreground || !sameWindow(*target_)) {
         clear(); auto checked=inspectWindow(foreground,settings_);

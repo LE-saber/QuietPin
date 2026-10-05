@@ -1,5 +1,6 @@
 #include "Config.h"
 #include "WindowOps.h"
+#include "PinPlacement.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -49,6 +50,23 @@ int main() {
         check(!loadSettings(file,loaded,error) && loaded.excluded==original.excluded,"corrupt config rejected without mutation");
         check(inspectWindow(GetDesktopWindow(),original).error==WindowError::System,"desktop protected");
         check(!sameWindow(Identity{}),"invalid identity safe");
+        for(UINT dpi:{96u,120u,144u,192u}) {
+            PinGeometry geometry{{-1800,300,-600,1000},{-1920,0,0,1080},dpi};
+            auto candidates=pinCandidates(geometry);
+            check(!candidates.empty() && !candidates.front().inside,"negative monitor outside placement");
+            check(candidates.front().rect.right-candidates.front().rect.left==MulDiv(24,dpi,96),"own DPI size once");
+            for(const auto& c:candidates) check(safePinCandidate(geometry,c),"candidate respects work area and system buttons");
+            geometry.fullscreen=true; check(pinCandidates(geometry).empty(),"fullscreen hides Pin");
+            geometry.fullscreen=false; geometry.frame.right=geometry.frame.left+100;
+            check(pinCandidates(geometry).empty(),"narrow target hides Pin");
+        }
+        PinGeometry maximized{{0,0,1920,1040},{0,0,1920,1040},96,24,0,0,true};
+        auto inside=pinCandidates(maximized);
+        check(!inside.empty() && inside.front().inside,"maximized caption candidates");
+        maximized.insideAllowed=false; check(pinCandidates(maximized).empty(),"unknown title bar never covered");
+        maximized.insideAllowed=true; maximized.offsetX=512;
+        for(const auto& c:pinCandidates(maximized)) check(safePinCandidate(maximized,c),"offset never covers caption buttons");
+        maximized.offsetX=513; check(pinCandidates(maximized).empty(),"invalid offset hidden");
         WNDCLASSW cls{}; cls.lpfnWndProc=DefWindowProcW; cls.hInstance=GetModuleHandleW(nullptr); cls.lpszClassName=L"QuietPin.CoreTest";
         RegisterClassW(&cls);
         HWND own=CreateWindowW(cls.lpszClassName,L"Own test window",WS_POPUP|WS_VISIBLE,-10000,-10000,10,10,nullptr,nullptr,cls.hInstance,nullptr);

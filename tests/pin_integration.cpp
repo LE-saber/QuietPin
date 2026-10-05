@@ -68,7 +68,7 @@ int wmain(int count,wchar_t** args) {
         check(WaitForSingleObject(settingsClient.hProcess,3000)==WAIT_OBJECT_0,"settings client"); CloseHandle(settingsClient.hProcess);
         HWND ui=nullptr;
         check(waitFor([&]{ui=find(pid,L"QuietPin.Settings.v1"); return ui && IsWindowVisible(ui);}),"settings ready");
-        SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_CHECKED,0); SendMessageW(ui,WM_COMMAND,110,0);
+        SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
         Settings saved;
         check(loadSettings(dir/L"settings.ini",saved,error) && saved.pin,"Pin setting persists");
         HWND pin=nullptr;
@@ -86,6 +86,24 @@ int wmain(int count,wchar_t** args) {
         waitFor([]{return false;},120);
         click(pin); check(waitFor([&]{return !isTopmost(target);}),"Pin true mouse unpins");
         check(GetForegroundWindow()==target && GetFocus()==target,"unpin keeps focus");
+        constexpr IID accessibleId{0x618736e0,0x3c3d,0x11cf,{0x81,0x0c,0x00,0xaa,0x00,0x38,0x9b,0x71}};
+        IAccessible* accessible=nullptr;
+        check(SUCCEEDED(AccessibleObjectFromWindow(pin,OBJID_CLIENT,accessibleId,reinterpret_cast<void**>(&accessible))),"MSAA object available");
+        VARIANT self{}; self.vt=VT_I4; self.lVal=CHILDID_SELF; BSTR name=nullptr;
+        auto named=accessible->get_accName(self,&name);
+        bool correct=SUCCEEDED(named) && name && wcscmp(name,L"Pin this window")==0;
+        SysFreeString(name); accessible->Release(); check(correct,"MSAA action name matches real unpinned state");
+        RECT before{}; GetWindowRect(pin,&before);
+        SetWindowPos(target,nullptr,220,210,720,340,SWP_NOZORDER|SWP_NOACTIVATE);
+        check(waitFor([&]{RECT r{};GetWindowRect(pin,&r);return IsWindowVisible(pin) && r.left!=before.left && r.top!=before.top;}),"Pin follows move and resize events");
+        ShowWindow(target,SW_MINIMIZE);
+        check(waitFor([&]{return !IsWindowVisible(pin) || GetForegroundWindow()!=target;}),"minimized target no stale Pin");
+        ShowWindow(target,SW_RESTORE); activate(target);
+        check(waitFor([&]{return IsWindowVisible(pin);}),"restored target rebinds");
+        ShowWindow(target,SW_MAXIMIZE);
+        check(waitFor([&]{RECT r{};GetWindowRect(pin,&r);return !IsWindowVisible(pin) || r.top!=before.top;}),"maximized geometry updates or safely hides");
+        ShowWindow(target,SW_RESTORE); activate(target);
+        check(waitFor([&]{return IsWindowVisible(pin);}),"restore after maximize");
         mouse(pin,MOUSEEVENTF_LEFTDOWN); waitFor([]{return false;},40); activate(other);
         waitFor([]{return false;},80); mouse(pin,MOUSEEVENTF_LEFTUP);
         waitFor([]{return false;},80); check(!isTopmost(target) && !isTopmost(other),"target switch cancels down/up gesture");
@@ -93,11 +111,27 @@ int wmain(int count,wchar_t** args) {
         // Disabling Pin while Tray remains enabled must retain foreground subscription.
         auto reopen=launch(exe,options+L" --settings"); WaitForSingleObject(reopen.hProcess,3000); CloseHandle(reopen.hProcess);
         check(waitFor([&]{ui=find(pid,L"QuietPin.Settings.v1");return ui && IsWindowVisible(ui);}),"reopen settings");
-        SendMessageW(GetDlgItem(ui,106),BM_SETCHECK,BST_CHECKED,0); SendMessageW(ui,WM_COMMAND,110,0);
-        SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_UNCHECKED,0); SendMessageW(ui,WM_COMMAND,110,0);
+        SendMessageW(GetDlgItem(ui,116),WM_SETTEXT,0,reinterpret_cast<LPARAM>(L"-20")); SendMessageW(GetDlgItem(ui,117),WM_SETTEXT,0,reinterpret_cast<LPARAM>(L"-8"));
+        SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        if(!waitFor([&]{return loadSettings(dir/L"settings.ini",saved,error) && saved.pinOffsetX==-20 && saved.pinOffsetY==-8;})) {
+            wchar_t result[512]{},x[32]{},y[32]{}; GetWindowTextW(GetDlgItem(ui,114),result,512);
+            GetWindowTextW(GetDlgItem(ui,116),x,32); GetWindowTextW(GetDlgItem(ui,117),y,32);
+            std::wcerr<<L"Offset save: "<<result<<L" x="<<x<<L" y="<<y<<L"\n";
+            throw std::runtime_error("UI offsets persist");
+        }
+        SendMessageW(ui,WM_COMMAND,118,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        check(loadSettings(dir/L"settings.ini",saved,error) && saved.pinOffsetX==0 && saved.pinOffsetY==0,"UI reset offsets");
+        SendMessageW(GetDlgItem(ui,109),WM_SETTEXT,0,reinterpret_cast<LPARAM>(L"quietpin_pin_integration.exe")); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        SendMessageW(ui,WM_CLOSE,0,0); activate(target);
+        check(waitFor([&]{return !IsWindowVisible(pin);}),"excluded executable hides Pin immediately");
+        auto exclusions=launch(exe,options+L" --settings"); WaitForSingleObject(exclusions.hProcess,3000); CloseHandle(exclusions.hProcess);
+        check(waitFor([&]{ui=find(pid,L"QuietPin.Settings.v1");return ui && IsWindowVisible(ui);}),"exclusions settings");
+        SendMessageW(GetDlgItem(ui,109),WM_SETTEXT,0,reinterpret_cast<LPARAM>(L"")); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        SendMessageW(GetDlgItem(ui,106),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
+        SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_UNCHECKED,0); SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0);
         check(waitFor([&]{return find(pid,L"QuietPin.Pin.v1")==nullptr;}),"Pin disabled destroys window");
         SendMessageW(GetDlgItem(ui,115),BM_SETCHECK,BST_CHECKED,0); SendMessageW(GetDlgItem(ui,106),BM_SETCHECK,BST_UNCHECKED,0);
-        SendMessageW(ui,WM_COMMAND,110,0); SendMessageW(ui,WM_CLOSE,0,0); activate(target);
+        SendMessageW(GetDlgItem(ui,110),BM_CLICK,0,0); SendMessageW(ui,WM_CLOSE,0,0); activate(target);
         check(waitFor([&]{pin=find(pid,L"QuietPin.Pin.v1");return pin && IsWindowVisible(pin);}),"Pin works after Tray disabled");
         click(pin); check(waitFor([&]{return isTopmost(target);}),"Pin after feature switches");
         DestroyWindow(target); target=nullptr;
@@ -119,3 +153,5 @@ int wmain(int count,wchar_t** args) {
         std::cerr<<"FAIL: "<<e.what()<<"\n"; return 1;
     }
 }
+
+

@@ -269,10 +269,19 @@ public:
         control(L"BUTTON",tr(L"选择 EXE…",L"Choose EXE…"),BS_PUSHBUTTON|WS_TABSTOP,Browse,20,440,140,30,dpi);
         auto pinCheck=control(L"BUTTON",tr(L"显示活动窗口 Pin 按钮",L"Show Pin near the active window"),BS_AUTOCHECKBOX|WS_TABSTOP,ShowPin,180,440,430,30,dpi);
         SendMessageW(pinCheck,BM_SETCHECK,settings.pin?BST_CHECKED:BST_UNCHECKED,0);
-        control(L"STATIC",lastResult,SS_LEFT,Result,20,483,596,60,dpi);
-        control(L"BUTTON",tr(L"保存",L"Save"),BS_DEFPUSHBUTTON|WS_TABSTOP,Save,20,555,105,34,dpi);
-        control(L"BUTTON",tr(L"关闭设置",L"Close settings"),BS_PUSHBUTTON|WS_TABSTOP,Close,140,555,155,34,dpi);
-        control(L"BUTTON",tr(L"退出 QuietPin",L"Exit QuietPin"),BS_PUSHBUTTON|WS_TABSTOP,Quit,455,555,161,34,dpi);
+        control(L"STATIC",tr(L"Pin 位置偏移（DIP）",L"Pin position offset (DIP)"),0,0,20,485,210,24,dpi);
+        control(L"STATIC",tr(L"水平",L"X"),0,0,245,485,55,24,dpi);
+        auto x=control(L"EDIT",std::to_wstring(settings.pinOffsetX),ES_AUTOHSCROLL|WS_TABSTOP,PinX,300,480,70,28,dpi);
+        control(L"STATIC",tr(L"垂直",L"Y"),0,0,390,485,55,24,dpi);
+        auto y=control(L"EDIT",std::to_wstring(settings.pinOffsetY),ES_AUTOHSCROLL|WS_TABSTOP,PinY,445,480,70,28,dpi);
+        SendMessageW(x,EM_SETLIMITTEXT,6,0); SendMessageW(y,EM_SETLIMITTEXT,6,0);
+        control(L"BUTTON",tr(L"恢复默认位置",L"Reset position"),BS_PUSHBUTTON|WS_TABSTOP,PinReset,20,522,165,29,dpi);
+        control(L"STATIC",tr(L"无安全位置时隐藏，可继续使用快捷键。",L"Hidden when no safe position; shortcuts remain available."),0,0,200,526,414,24,dpi);
+        EnableWindow(x,settings.pin); EnableWindow(y,settings.pin); EnableWindow(GetDlgItem(ui,PinReset),settings.pin);
+        control(L"STATIC",lastResult,SS_LEFT,Result,20,566,596,60,dpi);
+        control(L"BUTTON",tr(L"保存",L"Save"),BS_DEFPUSHBUTTON|WS_TABSTOP,Save,20,640,105,34,dpi);
+        control(L"BUTTON",tr(L"关闭设置",L"Close settings"),BS_PUSHBUTTON|WS_TABSTOP,Close,140,640,155,34,dpi);
+        control(L"BUTTON",tr(L"退出 QuietPin",L"Exit QuietPin"),BS_PUSHBUTTON|WS_TABSTOP,Quit,455,640,161,34,dpi);
         SetFocus(GetDlgItem(ui,Ctrl));
     }
     void checkbox(int id,const wchar_t* label,bool checked,int y,UINT dpi) {
@@ -287,7 +296,7 @@ public:
     }
     void resizeSettings(UINT dpi,RECT* suggested=nullptr) {
         MONITORINFO info{}; info.cbSize=sizeof(info); GetMonitorInfoW(MonitorFromWindow(ui,MONITOR_DEFAULTTONEAREST),&info);
-        RECT bounds{0,0,MulDiv(636,dpi,96),MulDiv(610,dpi,96)};
+        RECT bounds{0,0,MulDiv(636,dpi,96),MulDiv(700,dpi,96)};
         AdjustWindowRectExForDpi(&bounds,WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX,FALSE,WS_EX_TOOLWINDOW,dpi);
         const int height=bounds.bottom-bounds.top,width=bounds.right-bounds.left;
         int x=suggested?suggested->left:info.rcWork.left+(info.rcWork.right-info.rcWork.left-width)/2;
@@ -295,7 +304,7 @@ public:
         SetWindowPos(ui,nullptr,x,y,width,std::min(height,static_cast<int>(info.rcWork.bottom-info.rcWork.top)),SWP_NOZORDER|SWP_NOACTIVATE);
         // A scrollable client preserves all controls on small screens / high scaling.
         RECT client{}; GetClientRect(ui,&client);
-        SCROLLINFO scroll{}; scroll.cbSize=sizeof(scroll); scroll.fMask=SIF_RANGE|SIF_PAGE|SIF_POS; scroll.nMax=MulDiv(610,dpi,96)-1;
+        SCROLLINFO scroll{}; scroll.cbSize=sizeof(scroll); scroll.fMask=SIF_RANGE|SIF_PAGE|SIF_POS; scroll.nMax=MulDiv(700,dpi,96)-1;
         scroll.nPage=client.bottom; scroll.nPos=0; SetScrollInfo(ui,SB_VERT,&scroll,TRUE);
     }
     void openSettings() {
@@ -321,6 +330,10 @@ public:
         }
         candidate.status=checked(ShowStatus); candidate.tray=checked(ShowTray); candidate.startup=checked(Startup);
         candidate.pin=checked(ShowPin);
+        if(!pinOffset(textOf(GetDlgItem(ui,PinX)),-512,512,candidate.pinOffsetX) ||
+           !pinOffset(textOf(GetDlgItem(ui,PinY)),-256,256,candidate.pinOffsetY)) {
+            result(tr(L"Pin 偏移无效：水平 -512～512，垂直 -256～256（DIP）。",L"Invalid Pin offset: X -512 to 512, Y -256 to 256 DIP."),true); return;
+        }
         candidate.chinese=SendMessageW(GetDlgItem(ui,Language),CB_GETCURSEL,0,0)==0;
         candidate.excluded.clear(); std::wistringstream lines(textOf(GetDlgItem(ui,Exclusions))); std::wstring rule;
         while(std::getline(lines,rule)) {
@@ -440,8 +453,8 @@ public:
         case PinMessage: if(!exiting) monitor.refresh(); return 0;
         case WM_WTSSESSION_CHANGE:
             if(pin) {
-                if(w==WTS_SESSION_LOCK || w==WTS_CONSOLE_DISCONNECT || w==WTS_REMOTE_DISCONNECT || w==WTS_SESSION_LOGOFF) pin->suspend(true);
-                else if(w==WTS_SESSION_UNLOCK || w==WTS_CONSOLE_CONNECT || w==WTS_REMOTE_CONNECT) pin->suspend(ui!=nullptr);
+                if(w==WTS_SESSION_LOCK || w==WTS_CONSOLE_DISCONNECT || w==WTS_REMOTE_DISCONNECT || w==WTS_SESSION_LOGOFF) pin->session(false);
+                else if(w==WTS_SESSION_UNLOCK || w==WTS_CONSOLE_CONNECT || w==WTS_REMOTE_CONNECT) pin->session(true);
             } return 0;
         case WM_DISPLAYCHANGE: if(pin) pin->refresh(true); return 0;
         case WM_SETTINGCHANGE: if(pin) monitor.refresh(); return 0;
@@ -479,6 +492,9 @@ LRESULT CALLBACK settingsProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l) noexcept {
             else if(LOWORD(w)==Close || LOWORD(w)==IDCANCEL) DestroyWindow(hwnd);
             else if(LOWORD(w)==Quit) app->beginExit();
             else if(LOWORD(w)==Browse) app->browse();
+            else if(LOWORD(w)==ShowPin) {
+                bool enabled=app->checked(ShowPin); EnableWindow(GetDlgItem(hwnd,PinX),enabled); EnableWindow(GetDlgItem(hwnd,PinY),enabled); EnableWindow(GetDlgItem(hwnd,PinReset),enabled);
+            } else if(LOWORD(w)==PinReset) { SetWindowTextW(GetDlgItem(hwnd,PinX),L"0"); SetWindowTextW(GetDlgItem(hwnd,PinY),L"0"); }
             return 0;
         case WM_CLOSE: DestroyWindow(hwnd); return 0;
         case WM_NCDESTROY: app->ui=nullptr; if(app->pin && !app->exiting) app->pin->suspend(false); return DefWindowProcW(hwnd,msg,w,l);
@@ -588,3 +604,6 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int) {
         return 1;
     }
 }
+
+
+

@@ -14,6 +14,7 @@ public:
     void stop();
     void refresh(bool invalidate=false,bool moving=false);
     void suspend(bool value);
+    void session(bool available);
     void timer();
     HWND window() const { return overlay_.window(); }
     const std::wstring& error() const { return error_; }
@@ -31,7 +32,9 @@ private:
     PinOverlay overlay_;
     std::optional<Identity> target_,gesture_;
     unsigned long long epoch_=0,gestureEpoch_=0;
-    bool suspended_=false,sessionRegistered_=false,moving_=false;
+    bool suspended_=false,sessionBlocked_=false,sessionRegistered_=false,moving_=false;
+    RECT probeRect_{};
+    bool probeKnown_=false,probeSafe_=false;
     ULONGLONG moveDeadline_=0;
     std::wstring error_;
 };
