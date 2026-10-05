@@ -18,7 +18,7 @@ constexpr UINT_PTR ConfirmTimer=1, HideTimer=2, QuitTimer=3;
 constexpr int SettingsKeyId=2, ExitKeyId=3;
 constexpr Hotkey SettingsHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'T'};
 constexpr Hotkey ExitHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'Q'};
-enum Control { Ctrl=100,Alt,Shift,Win,Key,ShowStatus,ShowTray,Startup,Language,Exclusions,Save,Close,Quit,Browse,Result };
+enum Control { Ctrl=100,Alt,Shift,Win,Key,ShowStatus,ShowTray,Startup,Language,Exclusions,Save,Close,Quit,Browse,Result,ShowPin,PinX,PinY,PinReset };
 class App;
 App* eventApp=nullptr;
 
@@ -266,7 +266,8 @@ public:
         HWND edit=control(L"EDIT",rules,ES_MULTILINE|ES_AUTOVSCROLL|ES_WANTRETURN|WS_VSCROLL|WS_TABSTOP,Exclusions,20,313,596,115,dpi);
         SendMessageW(edit,EM_SETLIMITTEXT,32700,0);
         control(L"BUTTON",tr(L"选择 EXE…",L"Choose EXE…"),BS_PUSHBUTTON|WS_TABSTOP,Browse,20,440,140,30,dpi);
-        control(L"STATIC",tr(L"Pin 按钮将在后续版本提供。",L"Pin button will be available in a later version."),0,0,180,444,430,25,dpi);
+        auto pinCheck=control(L"BUTTON",tr(L"显示活动窗口 Pin 按钮",L"Show Pin near the active window"),BS_AUTOCHECKBOX|WS_TABSTOP,ShowPin,180,440,430,30,dpi);
+        SendMessageW(pinCheck,BM_SETCHECK,settings.pin?BST_CHECKED:BST_UNCHECKED,0);
         control(L"STATIC",lastResult,SS_LEFT,Result,20,483,596,60,dpi);
         control(L"BUTTON",tr(L"保存",L"Save"),BS_DEFPUSHBUTTON|WS_TABSTOP,Save,20,555,105,34,dpi);
         control(L"BUTTON",tr(L"关闭设置",L"Close settings"),BS_PUSHBUTTON|WS_TABSTOP,Close,140,555,155,34,dpi);
@@ -317,6 +318,7 @@ public:
             result(tr(L"快捷键无效，或与设置/退出快捷键重复。",L"Invalid shortcut, or it duplicates Settings / Exit."),true); return;
         }
         candidate.status=checked(ShowStatus); candidate.tray=checked(ShowTray); candidate.startup=checked(Startup);
+        candidate.pin=checked(ShowPin);
         candidate.chinese=SendMessageW(GetDlgItem(ui,Language),CB_GETCURSEL,0,0)==0;
         candidate.excluded.clear(); std::wistringstream lines(textOf(GetDlgItem(ui,Exclusions))); std::wstring rule;
         while(std::getline(lines,rule)) {

@@ -19,14 +19,31 @@ int main() {
         auto file=directory/L"设置.ini";
         Settings original; original.chinese=true; original.tray=true; original.status=false;
         original.toggle={MOD_CONTROL|MOD_SHIFT,VK_F9}; original.excluded={L"C:\\工具 文件\\程序.exe",L"chrome.exe"};
+        original.pin=true; original.pinOffsetX=-31; original.pinOffsetY=17;
         std::wstring error;
         check(saveSettings(file,original,error),"atomic config save");
         Settings loaded;
         check(loadSettings(file,loaded,error),"config reload");
         check(loaded.toggle==original.toggle && loaded.excluded==original.excluded && loaded.chinese && loaded.tray && !loaded.status,"roundtrip preserves values");
+        check(loaded.pin && loaded.pinSize==24 && loaded.pinOffsetX==-31 && loaded.pinOffsetY==17,"Pin roundtrip");
+        int offset=0;
+        check(pinOffset(L" -512 ",-512,512,offset) && offset==-512,"signed Pin offset");
+        check(!pinOffset(L"-513",-512,512,offset) && !pinOffset(L"999999999999999999",-512,512,offset) &&
+              !pinOffset(L"+2",-512,512,offset) && !pinOffset(L"-",-512,512,offset),"reject invalid Pin offsets");
+        const auto legacy=directory/L"legacy.ini";
+        const std::wstring old=L"\xfeff[General]\r\nSchemaVersion=1\r\nLanguage=en\r\nShowStatus=1\r\nShowTray=0\r\nStartWithWindows=0\r\n[Hotkeys]\r\nToggleModifiers=3\r\nToggleKey=84\r\n[Exclusions]\r\nCount=0\r\n";
+        auto writeIni=[&](const std::wstring& data) { std::ofstream out(legacy,std::ios::binary|std::ios::trunc); out.write(reinterpret_cast<const char*>(data.data()),data.size()*sizeof(wchar_t)); };
+        writeIni(old); Settings upgraded=original;
+        check(loadSettings(legacy,upgraded,error) && !upgraded.pin && upgraded.pinOffsetX==0,"v0.1 config upgrades with Pin off");
+        writeIni(old+L"[Pin]\r\nOffsetXDip=-513\r\n");
+        check(!loadSettings(legacy,upgraded,error) && !upgraded.pin,"bad Pin config leaves settings unchanged");
+        writeIni(old+L"[Pin]\r\nSizeDip=0\r\n");
+        check(!loadSettings(legacy,upgraded,error),"invalid Pin size rejected");
         Settings invalid=original; invalid.excluded={L"bad\r\nvalue.exe"};
         check(!saveSettings(file,invalid,error),"reject newline injection");
         check(loadSettings(file,loaded,error) && loaded.excluded==original.excluded,"failed save leaves prior config");
+        invalid=original; invalid.pinOffsetY=257;
+        check(!saveSettings(file,invalid,error) && loadSettings(file,loaded,error) && loaded.pinOffsetY==17,"bad Pin save keeps prior file");
         // Malformed file must not mutate the caller's accepted settings.
         { std::ofstream stream(file,std::ios::binary|std::ios::trunc); stream<<"broken"; }
         check(!loadSettings(file,loaded,error) && loaded.excluded==original.excluded,"corrupt config rejected without mutation");

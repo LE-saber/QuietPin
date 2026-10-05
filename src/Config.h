@@ -15,12 +15,17 @@ struct Settings {
     bool status = true;
     bool tray = false;
     bool startup = false;
+    bool pin = false;
+    UINT pinSize = 24;
+    int pinOffsetX = 0, pinOffsetY = 0;
     bool chinese = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_CHINESE;
     std::vector<std::wstring> excluded;
 };
 std::wstring trim(std::wstring text);
 std::wstring lower(std::wstring text);
 bool validHotkey(Hotkey hotkey);
+bool pinOffset(const std::wstring& text, int minimum, int maximum, int& value);
+bool validPinSettings(const Settings& settings);
 std::wstring keyName(UINT key);
 std::wstring hotkeyText(Hotkey hotkey);
 bool isExcluded(const std::wstring& path, const std::vector<std::wstring>& rules);

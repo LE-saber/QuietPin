@@ -59,6 +59,21 @@ static bool number(const std::wstring& value, UINT& result) {
     result = static_cast<UINT>(n);
     return true;
 }
+bool pinOffset(const std::wstring& text,int minimum,int maximum,int& value) {
+    const auto s=trim(text);
+    if(s.empty()) return false;
+    const bool negative=s[0]==L'-';
+    const auto digits=s.substr(negative?1:0);
+    UINT n=0;
+    if(!number(digits,n) || n>static_cast<UINT>(std::numeric_limits<int>::max())) return false;
+    const int candidate=negative?-static_cast<int>(n):static_cast<int>(n);
+    if(candidate<minimum || candidate>maximum) return false;
+    value=candidate; return true;
+}
+bool validPinSettings(const Settings& s) {
+    return s.pinSize>=20 && s.pinSize<=48 && s.pinOffsetX>=-512 && s.pinOffsetX<=512 &&
+           s.pinOffsetY>=-256 && s.pinOffsetY<=256;
+}
 bool loadSettings(const std::filesystem::path& file, Settings& settings, std::wstring& error) {
     HANDLE handle = CreateFileW(file.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
     if (handle == INVALID_HANDLE_VALUE) {
@@ -109,6 +124,13 @@ bool loadSettings(const std::filesystem::path& file, Settings& settings, std::ws
     const auto language = fields[L"General.Language"];
     if (language != L"zh-CN" && language != L"en") { error=L"Unsupported language"; return false; }
     candidate.chinese=language==L"zh-CN";
+    // Optional v0.2 fields: old configurations always upgrade with Pin disabled.
+    candidate.pin=false; candidate.pinSize=24; candidate.pinOffsetX=0; candidate.pinOffsetY=0;
+    if((fields.contains(L"General.ShowPin") && !boolean(L"General.ShowPin",candidate.pin)) ||
+       (fields.contains(L"Pin.SizeDip") && !integer(L"Pin.SizeDip",candidate.pinSize)) ||
+       (fields.contains(L"Pin.OffsetXDip") && !pinOffset(fields[L"Pin.OffsetXDip"],-512,512,candidate.pinOffsetX)) ||
+       (fields.contains(L"Pin.OffsetYDip") && !pinOffset(fields[L"Pin.OffsetYDip"],-256,256,candidate.pinOffsetY)) ||
+       !validPinSettings(candidate)) { error=L"Invalid Pin configuration values"; return false; }
     candidate.excluded.clear();
     for(UINT i=0;i<count;++i) {
         const auto rule=fields[L"Exclusions.Value" + std::to_wstring(i)];
@@ -118,13 +140,14 @@ bool loadSettings(const std::filesystem::path& file, Settings& settings, std::ws
     settings=std::move(candidate); return true;
 }
 bool saveSettings(const std::filesystem::path& file, const Settings& s, std::wstring& error) {
-    if (!validHotkey(s.toggle) || s.excluded.size()>128) { error=L"Invalid settings"; return false; }
+    if (!validHotkey(s.toggle) || s.excluded.size()>128 || !validPinSettings(s)) { error=L"Invalid settings"; return false; }
     std::wstring data=L"\xfeff[General]\r\nSchemaVersion=1\r\nLanguage=";
     data += s.chinese ? L"zh-CN" : L"en";
     data += L"\r\nShowStatus="+std::to_wstring(s.status)+L"\r\nShowTray="+std::to_wstring(s.tray)+
-        L"\r\nStartWithWindows="+std::to_wstring(s.startup)+L"\r\n[Hotkeys]\r\nToggleModifiers="+
+        L"\r\nShowPin="+std::to_wstring(s.pin)+L"\r\nStartWithWindows="+std::to_wstring(s.startup)+L"\r\n[Hotkeys]\r\nToggleModifiers="+
         std::to_wstring(s.toggle.modifiers)+L"\r\nToggleKey="+std::to_wstring(s.toggle.key)+
-        L"\r\n[Exclusions]\r\nCount="+std::to_wstring(s.excluded.size())+L"\r\n";
+        L"\r\n[Pin]\r\nSizeDip="+std::to_wstring(s.pinSize)+L"\r\nOffsetXDip="+std::to_wstring(s.pinOffsetX)+
+        L"\r\nOffsetYDip="+std::to_wstring(s.pinOffsetY)+L"\r\n[Exclusions]\r\nCount="+std::to_wstring(s.excluded.size())+L"\r\n";
     for(size_t i=0;i<s.excluded.size();++i) {
         if (s.excluded[i].empty() || s.excluded[i].size()>2048 || s.excluded[i].find_first_of(L"\r\n\0",0,3)!=std::wstring::npos) {
             error=L"Invalid exclusion rule"; return false;
