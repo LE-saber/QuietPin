@@ -18,7 +18,7 @@ struct Settings {
     bool pin = false;
     UINT pinSize = 24;
     int pinOffsetX = 0, pinOffsetY = 0;
-    bool chinese = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_CHINESE;
+    bool chinese = false;
     std::vector<std::wstring> excluded;
 };
 std::wstring trim(std::wstring text);

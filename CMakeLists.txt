@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(QuietPin VERSION 0.2.0 LANGUAGES CXX RC)
+project(QuietPin VERSION 0.2.1 LANGUAGES CXX RC)
 if(NOT WIN32)
   message(FATAL_ERROR "QuietPin requires Windows")
 endif()

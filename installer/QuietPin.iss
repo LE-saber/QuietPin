@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.0"
+  #define AppVersion "0.2.1"
 #endif
 #ifndef SourceRoot
   #define SourceRoot ".."
@@ -29,8 +29,34 @@ CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes
 VersionInfoVersion={#AppVersion}
+ShowLanguageDialog=yes
+LanguageDetectionMethod=none
+UsePreviousLanguage=no
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimp"; MessagesFile: "{#SourceRoot}\installer\languages\ChineseSimplified.isl"
+[CustomMessages]
+english.DesktopShortcut=Create a desktop shortcut
+chinesesimp.DesktopShortcut=创建桌面快捷方式
+english.SettingsShortcut=QuietPin Settings
+chinesesimp.SettingsShortcut=QuietPin 设置
+english.ExitShortcut=Exit QuietPin
+chinesesimp.ExitShortcut=退出 QuietPin
+english.UninstallShortcut=Uninstall QuietPin
+chinesesimp.UninstallShortcut=卸载 QuietPin
+english.StartBackground=Start QuietPin in the background
+chinesesimp.StartBackground=在后台启动 QuietPin
+english.CloseFailed=QuietPin did not finish closing. Exit it from Settings, then retry.
+chinesesimp.CloseFailed=QuietPin 尚未退出。请在设置中退出程序后重试。
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:DesktopShortcut}"; Flags: unchecked
+[InstallDelete]
+Type: files; Name: "{group}\QuietPin Settings.lnk"
+Type: files; Name: "{group}\Exit QuietPin.lnk"
+Type: files; Name: "{group}\Uninstall QuietPin.lnk"
+Type: files; Name: "{group}\QuietPin 设置.lnk"
+Type: files; Name: "{group}\退出 QuietPin.lnk"
+Type: files; Name: "{group}\卸载 QuietPin.lnk"
 [Files]
 Source: "{#BinaryPath}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -38,16 +64,17 @@ Source: "{#SourceRoot}\README.zh.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\verification-v0.2.0.zh-CN.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\verification-v0.2.0.en.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\language-settings.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\open-settings.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\exit.cmd"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\QuietPin"; Filename: "{app}\QuietPin.exe"
-Name: "{group}\QuietPin Settings"; Filename: "{app}\QuietPin.exe"; Parameters: "--settings"
-Name: "{group}\Exit QuietPin"; Filename: "{app}\QuietPin.exe"; Parameters: "--exit"
-Name: "{group}\Uninstall QuietPin"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:SettingsShortcut}"; Filename: "{app}\QuietPin.exe"; Parameters: "--settings"
+Name: "{group}\{cm:ExitShortcut}"; Filename: "{app}\QuietPin.exe"; Parameters: "--exit"
+Name: "{group}\{cm:UninstallShortcut}"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\QuietPin"; Filename: "{app}\QuietPin.exe"; Tasks: desktopicon
 [Run]
-Filename: "{app}\QuietPin.exe"; Description: "Start QuietPin in the background"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\QuietPin.exe"; Description: "{cm:StartBackground}"; Flags: nowait postinstall skipifsilent
 [Code]
 function StopOwnedInstance: Boolean;
 var
@@ -63,13 +90,13 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if not StopOwnedInstance then
-    Result := 'QuietPin did not finish closing. Exit it from Settings, then retry.';
+    Result := CustomMessage('CloseFailed');
 end;
 function InitializeUninstall: Boolean;
 begin
   Result := StopOwnedInstance;
   if not Result then
-    MsgBox('QuietPin did not finish closing. Exit it from Settings, then retry.', mbError, MB_OK);
+    MsgBox(CustomMessage('CloseFailed'), mbError, MB_OK);
 end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var

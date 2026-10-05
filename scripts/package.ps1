@@ -1,13 +1,13 @@
 param([string]$InnoCompiler='', [string]$BinaryPath='')
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
-$version='0.2.0'
+$version='0.2.1'
 if(!$BinaryPath) {
     $BinaryPath=Join-Path $root 'build\QuietPin.exe'
     if(!(Test-Path -LiteralPath $BinaryPath)){$BinaryPath=Join-Path $root 'build\Release\QuietPin.exe'}
 }
 $binary=Get-Item -LiteralPath $BinaryPath
-if($binary.VersionInfo.FileVersion -ne $version){throw 'Build the matching v0.2.0 binary before packaging.'}
+if($binary.VersionInfo.FileVersion -ne $version){throw "Build the matching v$version binary before packaging."}
 if(!$InnoCompiler){
     $InnoCompiler=Join-Path $root 'build\tools\InnoSetup\ISCC.exe'
     if(!(Test-Path -LiteralPath $InnoCompiler)){
@@ -25,7 +25,7 @@ foreach($name in @('open-settings.cmd','exit.cmd')){
 foreach($name in @('README.md','README.zh.md','CHANGELOG.md')){
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $release -Force
 }
-foreach($name in @('verification-v0.2.0.zh-CN.md','verification-v0.2.0.en.md','technical-design.zh-CN.md','pin-implementation-plan.zh-CN.md')){
+foreach($name in @('verification-v0.2.0.zh-CN.md','verification-v0.2.0.en.md','technical-design.zh-CN.md','pin-implementation-plan.zh-CN.md','language-settings.md')){
     Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination $release -Force
 }
 $hash=Get-FileHash -LiteralPath (Join-Path $release 'QuietPin.exe') -Algorithm SHA256

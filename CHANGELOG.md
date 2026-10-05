@@ -1,5 +1,11 @@
 # 更新日志 / Changelog
 
+## v0.2.1 — 语言改进 / Language update · 待人工验收 / Manual acceptance pending
+
+**中文：** 安装时可选择 English / 简体中文，默认 English。安装选项、快捷方式和退出提示双语化；切换安装语言时清理旧语言的产品快捷方式。程序首次运行默认英语，安装后仍可在设置中切换语言，升级保留已有语言配置。本次只构建打包，不替换已发布 v0.2.0，也不重跑最终自动测试。
+
+**English:** The installer now offers English / Simplified Chinese, defaulting to English. Installer tasks, shortcuts and exit errors are localized, and stale product shortcuts from a previous installer language are removed. New application profiles default to English; language can be changed in Settings and existing choices survive upgrades. This update is built and packaged without replacing the released v0.2.0 or rerunning final automated tests.
+
 ## v0.2.0 — 2026-10-05 · 正式发布 / Stable release
 
 ### 中文

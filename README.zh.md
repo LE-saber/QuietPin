@@ -6,6 +6,8 @@ Windows 11 x64 轻量窗口置顶工具。原生 C++/Win32，不需要安装 .NE
 
 v0.2 包含可选 Pin 按钮，同时提供 Windows 安装 EXE 和便携 ZIP。用户已确认人工测试通过，v0.2.0 为正式发布；v0.1 历史发布保留。
 
+**v0.2.1 语言改进（已构建，待人工验收）：** 安装时可选 English / 简体中文，默认 English；程序首次运行也默认英语。安装后按 Ctrl+Alt+Shift+T，在 Language 中选择语言并保存；升级保留已有语言设置。[语言说明](https://github.com/LE-saber/QuietPin/blob/main/docs/language-settings.md)。下方下载链接仍指向已验收的 v0.2.0 正式版。
+
 [下载 v0.2.0](https://github.com/LE-saber/QuietPin/releases/tag/v0.2.0) · [更新日志](https://github.com/LE-saber/QuietPin/blob/main/CHANGELOG.md) · [Pin 技术方案](https://github.com/LE-saber/QuietPin/blob/main/docs/pin-implementation-plan.zh-CN.md) · [验证记录](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.zh-CN.md)
 
 | 下载 | 用途 |
@@ -89,4 +91,3 @@ QuietPin.exe --startup
 安装包通过 Inno Setup 6.7+ 构建：`.\scripts\package.ps1 -InnoCompiler "C:\路径\ISCC.exe"`。打包脚本检查 EXE 版本，同时生成安装 EXE、便携 ZIP 和 SHA256 校验文件。`--exit-if-owned` 是安装升级/卸载使用的管理参数，只退出与命令 EXE 路径相同的实例，并等待清理完成。
 
 安装版和便携版附中英文 README、双语更新日志与验证记录。便携包另附 `technical-design.zh-CN.md` 和 Pin 技术计划。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
-

@@ -6,6 +6,8 @@ A lightweight always-on-top tool for Windows 11 x64, built with native C++20 and
 
 v0.2 adds an optional Pin button and a per-user Windows installer. **The user confirmed manual testing passed and approved v0.2.0 for stable release.** The v0.1 release remains available.
 
+**v0.2.1 language update (built, awaiting manual acceptance):** installation offers English / Simplified Chinese, defaulting to English. New application profiles also default to English. After installation, open Settings with Ctrl+Alt+Shift+T, change Language and Save; upgrades preserve an existing language choice. [Language guide](https://github.com/LE-saber/QuietPin/blob/main/docs/language-settings.md). The download links below are for the accepted v0.2.0 release.
+
 [Release v0.2.0](https://github.com/LE-saber/QuietPin/releases/tag/v0.2.0) · [Changelog](https://github.com/LE-saber/QuietPin/blob/main/CHANGELOG.md) · [Verification and limitations](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.en.md)
 
 ## Download and start
@@ -16,7 +18,7 @@ v0.2 adds an optional Pin button and a per-user Windows installer. **The user co
 | [Portable ZIP](https://github.com/LE-saber/QuietPin/releases/download/v0.2.0/QuietPin-v0.2.0-win-x64.zip) | Extract the whole folder and run QuietPin.exe |
 | [SHA256 checksums](https://github.com/LE-saber/QuietPin/releases/download/v0.2.0/QuietPin-v0.2.0-SHA256SUMS.txt) | Verify the installer and ZIP |
 
-The installer defaults to `%LOCALAPPDATA%\Programs\QuietPin`. Start menu entries provide Run, Settings, Exit and Uninstall; a desktop shortcut is optional. The installer interface is English; the application supports Chinese and English. Installing does not enable sign-in startup, the tray icon or Pin.
+The installer defaults to `%LOCALAPPDATA%\Programs\QuietPin`. Start menu entries provide Run, Settings, Exit and Uninstall; a desktop shortcut is optional. v0.2.0 has an English installer; the v0.2.1 build adds an English / Chinese wizard choice. Application Settings supports both languages. Installing does not enable sign-in startup, the tray icon or Pin.
 
 Normal startup is quiet. Use these shortcuts immediately:
 

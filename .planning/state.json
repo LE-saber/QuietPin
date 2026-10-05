@@ -30,9 +30,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "阶段 5 广泛平台验证（待后续指令）",
-    "reason": "用户人工验收通过；v0.2.0 正式发布，阶段 4 交付完成"
+    "command": "manual-v0.2.1-language-verification",
+    "label": "人工测试 v0.2.1 安装语言与默认英语",
+    "reason": "新语言功能已构建，v0.2.0 正式版保留；不运行最终自动测试"
   },
-  "updated_at": "2026-10-05T07:24:40.9931636Z"
+  "updated_at": "2026-10-05T07:47:29.2215521Z"
 }

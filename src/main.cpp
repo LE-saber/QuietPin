@@ -311,7 +311,7 @@ public:
         if(exiting) return;
         if(pin) pin->suspend(true);
         if(!ui) {
-            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · 0.2",L"QuietPin Settings · 0.2"),
+            ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · 0.2.1",L"QuietPin Settings · 0.2.1"),
                 WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VSCROLL,0,0,640,640,host,nullptr,GetModuleHandleW(nullptr),this);
             if(!ui) { if(pin) pin->suspend(false); return; }
             resizeSettings(GetDpiForWindow(ui)); buildControls();
