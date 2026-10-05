@@ -1,5 +1,7 @@
 #include "Config.h"
 #include "WindowOps.h"
+#include "PinController.h"
+#include <wtsapi32.h>
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shellapi.h>
@@ -13,14 +15,12 @@ namespace {
 constexpr wchar_t HostClass[]=L"QuietPin.Host.v1";
 constexpr wchar_t SettingsClass[]=L"QuietPin.Settings.v1";
 constexpr wchar_t StatusClass[]=L"QuietPin.Status.v1";
-constexpr UINT ManageMessage=WM_APP+1, TrayMessage=WM_APP+2, ForegroundMessage=WM_APP+3;
+constexpr UINT ManageMessage=WM_APP+1, TrayMessage=WM_APP+2, ForegroundMessage=WM_APP+3, PinMessage=WM_APP+4;
 constexpr UINT_PTR ConfirmTimer=1, HideTimer=2, QuitTimer=3;
 constexpr int SettingsKeyId=2, ExitKeyId=3;
 constexpr Hotkey SettingsHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'T'};
 constexpr Hotkey ExitHotkey{MOD_CONTROL|MOD_ALT|MOD_SHIFT,'Q'};
 enum Control { Ctrl=100,Alt,Shift,Win,Key,ShowStatus,ShowTray,Startup,Language,Exclusions,Save,Close,Quit,Browse,Result,ShowPin,PinX,PinY,PinReset };
-class App;
-App* eventApp=nullptr;
 
 // Stable per-config identity; default remains one instance per user session.
 std::wstring profileTag(const std::filesystem::path& dir) {
@@ -51,7 +51,8 @@ public:
     HFONT uiFont=nullptr,statusFont=nullptr;
     HICON icon=nullptr;
     HANDLE mutex=nullptr;
-    HWINEVENTHOOK foregroundHook=nullptr;
+    WindowEventMonitor monitor;
+    std::unique_ptr<PinController> pin;
     std::optional<Identity> recent;
     std::vector<Identity> managed;
     struct Pending { Identity window; bool wanted; ULONGLONG started; };
@@ -71,7 +72,7 @@ public:
         marker=L"QuietPin.Managed."+std::to_wstring(GetCurrentProcessId());
     }
     ~App() {
-        if(foregroundHook) UnhookWinEvent(foregroundHook);
+        pin.reset(); monitor.stop();
         if(trayAdded) removeTray();
         if(statusWindow && IsWindow(statusWindow)) DestroyWindow(statusWindow);
         if(ui && IsWindow(ui)) DestroyWindow(ui);
@@ -80,13 +81,13 @@ public:
         if(statusFont) DeleteObject(statusFont);
         if(icon) DestroyIcon(icon);
         if(mutex) CloseHandle(mutex);
-        if(eventApp==this) eventApp=nullptr;
     }
     const wchar_t* tr(const wchar_t* zh,const wchar_t* en) const { return settings.chinese?zh:en; }
     void result(std::wstring message, bool failure=false, HWND target=nullptr) {
         lastResult=std::move(message);
         if(ui) SetWindowTextW(GetDlgItem(ui,Result),lastResult.c_str());
         if(settings.status && !exiting) showStatus(failure,target);
+        if(pin && !exiting) monitor.refresh();
     }
     bool initialize() {
         std::wstring error;
@@ -117,6 +118,8 @@ public:
                            L"A shortcut is unavailable. Change the toggle shortcut; rerun the EXE or use --settings / --exit.");
         }
         applyTray();
+        pin=std::make_unique<PinController>(host,PinMessage,monitor,settings,[this](HWND target){toggle(target);},[this]{return pending.has_value() || exiting;});
+        if(!pin->apply()) result(pin->error(),true);
         if(!configOk || !toggleRegistered || !settingsRegistered || !exitRegistered) openSettings();
         return true;
     }
@@ -144,6 +147,7 @@ public:
         }
         pending=Pending{window,wanted,GetTickCount64()};
         SetTimer(host,ConfirmTimer,30,nullptr);
+        if(pin) monitor.refresh();
     }
     void confirm() {
         if(!pending) { KillTimer(host,ConfirmTimer); return; }
@@ -169,14 +173,10 @@ public:
         NOTIFYICONDATAW data{}; data.cbSize=sizeof(data); data.hWnd=host; data.uID=1;
         Shell_NotifyIconW(NIM_DELETE,&data); trayAdded=false;
     }
-    static void CALLBACK foregroundCallback(HWINEVENTHOOK,DWORD,HWND hwnd,LONG,LONG,DWORD,DWORD) noexcept {
-        if(eventApp && eventApp->host) PostMessageW(eventApp->host,ForegroundMessage,reinterpret_cast<WPARAM>(hwnd),0);
-    }
     void applyTray() {
+        monitor.observeForeground(host,ForegroundMessage,!exiting && (settings.tray || settings.pin));
         if(settings.tray) {
-            if(!foregroundHook) {
-                eventApp=this;
-                foregroundHook=SetWinEventHook(EVENT_SYSTEM_FOREGROUND,EVENT_SYSTEM_FOREGROUND,nullptr,foregroundCallback,0,0,WINEVENT_OUTOFCONTEXT);
+            if(monitor.foregroundReady()) {
                 rememberForeground(GetForegroundWindow());
             }
             if(!trayAdded) {
@@ -187,16 +187,16 @@ public:
                 if(trayAdded) { data.uVersion=NOTIFYICON_VERSION_4; Shell_NotifyIconW(NIM_SETVERSION,&data); }
                 else result(tr(L"托盘图标无法显示，可使用快捷键或再次运行 EXE 打开设置。",L"Tray icon unavailable. Use the shortcut or rerun the EXE for Settings."),true);
             }
-            if(!foregroundHook) result(tr(L"无法跟踪托盘目标；托盘置顶项不可用。",L"Cannot track tray target; tray pin command is unavailable."),true);
+            if(!monitor.foregroundReady()) result(tr(L"无法跟踪托盘目标；托盘置顶项不可用。",L"Cannot track tray target; tray pin command is unavailable."),true);
         } else {
             if(trayAdded) removeTray();
-            if(foregroundHook) { UnhookWinEvent(foregroundHook); foregroundHook=nullptr; }
             recent.reset();
         }
     }
     void trayMenu(POINT point) {
         auto target=recent;
-        if(target && (!sameWindow(*target) || !inspectWindow(target->hwnd,settings).window)) target.reset();
+        if(target && (!monitor.foregroundReady() || !sameWindow(*target) || !inspectWindow(target->hwnd,settings).window)) target.reset();
+        if(pin) pin->suspend(true);
         HMENU menu=CreatePopupMenu();
         AppendMenuW(menu,MF_STRING|(target?0:MF_GRAYED),1,target && isTopmost(target->hwnd)?tr(L"取消当前窗口置顶",L"Unpin current window"):tr(L"置顶当前窗口",L"Pin current window"));
         AppendMenuW(menu,MF_STRING,2,tr(L"设置",L"Settings"));
@@ -205,6 +205,7 @@ public:
         SetForegroundWindow(host);
         UINT command=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_NONOTIFY|TPM_RIGHTBUTTON,point.x,point.y,0,host,nullptr);
         DestroyMenu(menu); PostMessageW(host,WM_NULL,0,0);
+        if(pin) pin->suspend(false);
         if(command==1 && target) toggle(target->hwnd);
         else if(command==2) openSettings();
         else if(command==3) beginExit();
@@ -299,6 +300,7 @@ public:
     }
     void openSettings() {
         if(exiting) return;
+        if(pin) pin->suspend(true);
         if(!ui) {
             ui=CreateWindowExW(WS_EX_TOOLWINDOW,SettingsClass,tr(L"QuietPin 设置 · MVP 0.1",L"QuietPin Settings · MVP 0.1"),
                 WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_VSCROLL,0,0,640,640,host,nullptr,GetModuleHandleW(nullptr),this);
@@ -367,7 +369,8 @@ public:
             } else ++it;
         }
         applyTray();
-        result(settings.tray && (!trayAdded || !foregroundHook)?
+        const bool pinOk=!pin || pin->apply();
+        result(!pinOk?pin->error():settings.tray && (!trayAdded || !monitor.foregroundReady())?
             tr(L"设置已保存，但托盘未完全启用；请关闭再开启托盘重试。",L"Settings saved, but tray setup failed. Toggle the tray off and on to retry."):
             tr(L"设置已保存。",L"Settings saved."));
         if(languageChanged) { DestroyWindow(ui); openSettings(); }
@@ -390,7 +393,8 @@ public:
         if(toggleRegistered) UnregisterHotKey(host,toggleId);
         if(settingsRegistered) UnregisterHotKey(host,SettingsKeyId);
         if(exitRegistered) UnregisterHotKey(host,ExitKeyId);
-        if(foregroundHook) { UnhookWinEvent(foregroundHook); foregroundHook=nullptr; }
+        if(pin) pin->stop();
+        monitor.stop();
         if(trayAdded) removeTray();
         // A requested pin may finish just after exit is requested; retain it until cleanup settles.
         pending.reset(); KillTimer(host,ConfirmTimer);
@@ -425,8 +429,22 @@ public:
             else if(w==SettingsKeyId) openSettings(); else if(w==ExitKeyId) beginExit();
             return 0;
         case WM_TIMER:
-            if(w==ConfirmTimer) confirm(); else if(w==HideTimer) hideStatus(); else if(w==QuitTimer) cleanupPins(); return 0;
-        case ForegroundMessage: rememberForeground(reinterpret_cast<HWND>(w)); return 0;
+            if(w==ConfirmTimer) confirm(); else if(w==HideTimer) hideStatus(); else if(w==QuitTimer) cleanupPins(); else if(w==40 && pin) pin->timer(); return 0;
+        case ForegroundMessage: {
+            auto events=monitor.take();
+            if(exiting) return 0;
+            if(events.foreground) rememberForeground(events.latestForeground);
+            if(pin) pin->refresh(events.invalidated,events.moving);
+            return 0;
+        }
+        case PinMessage: if(!exiting) monitor.refresh(); return 0;
+        case WM_WTSSESSION_CHANGE:
+            if(pin) {
+                if(w==WTS_SESSION_LOCK || w==WTS_CONSOLE_DISCONNECT || w==WTS_REMOTE_DISCONNECT || w==WTS_SESSION_LOGOFF) pin->suspend(true);
+                else if(w==WTS_SESSION_UNLOCK || w==WTS_CONSOLE_CONNECT || w==WTS_REMOTE_CONNECT) pin->suspend(ui!=nullptr);
+            } return 0;
+        case WM_DISPLAYCHANGE: if(pin) pin->refresh(true); return 0;
+        case WM_SETTINGCHANGE: if(pin) monitor.refresh(); return 0;
         case TrayMessage: {
             UINT event=LOWORD(l);
             if(event==WM_CONTEXTMENU) { POINT p{}; GetCursorPos(&p); trayMenu(p); }
@@ -463,7 +481,7 @@ LRESULT CALLBACK settingsProc(HWND hwnd,UINT msg,WPARAM w,LPARAM l) noexcept {
             else if(LOWORD(w)==Browse) app->browse();
             return 0;
         case WM_CLOSE: DestroyWindow(hwnd); return 0;
-        case WM_NCDESTROY: app->ui=nullptr; return DefWindowProcW(hwnd,msg,w,l);
+        case WM_NCDESTROY: app->ui=nullptr; if(app->pin && !app->exiting) app->pin->suspend(false); return DefWindowProcW(hwnd,msg,w,l);
         case WM_DPICHANGED: {
             // Preserve unsaved input; scale existing child rectangles instead of rebuilding settings.
             auto* rect=reinterpret_cast<RECT*>(l);
