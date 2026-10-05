@@ -73,4 +73,4 @@ QuietPin.exe --startup
 
 运行测试：`ctest --test-dir build --output-on-failure`。测量默认空闲模式：`.\scripts\measure-idle.ps1 -Seconds 60`。
 
-完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
+便携包内附 `technical-design.zh-CN.md` 与 `verification.zh-CN.md`。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。

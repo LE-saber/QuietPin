@@ -32,6 +32,15 @@ int main() {
         check(!loadSettings(file,loaded,error) && loaded.excluded==original.excluded,"corrupt config rejected without mutation");
         check(inspectWindow(GetDesktopWindow(),original).error==WindowError::System,"desktop protected");
         check(!sameWindow(Identity{}),"invalid identity safe");
+        WNDCLASSW cls{}; cls.lpfnWndProc=DefWindowProcW; cls.hInstance=GetModuleHandleW(nullptr); cls.lpszClassName=L"QuietPin.CoreTest";
+        RegisterClassW(&cls);
+        HWND own=CreateWindowW(cls.lpszClassName,L"Own test window",WS_POPUP|WS_VISIBLE,-10000,-10000,10,10,nullptr,nullptr,cls.hInstance,nullptr);
+        check(own && inspectWindow(own,original).error==WindowError::Own,"own windows rejected");
+        Identity identity; identity.hwnd=own; identity.tid=GetWindowThreadProcessId(own,&identity.pid);
+        FILETIME exited{},kernel{},user{}; GetProcessTimes(GetCurrentProcess(),&identity.created,&exited,&kernel,&user);
+        check(sameWindow(identity),"live window identity"); DestroyWindow(own);
+        DWORD failure=0;
+        check(!sameWindow(identity) && !requestTopmost(identity,true,failure),"destroyed target rejected safely");
         const auto value=L"QuietPin.AutomatedTest."+std::to_wstring(GetCurrentProcessId());
         StartupSnapshot before;
         check(readStartup(value,before,error),"read isolated startup snapshot");

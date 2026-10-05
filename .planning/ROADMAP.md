@@ -4,9 +4,9 @@
 
 | Phase | Goal | State |
 | --- | --- | --- |
-| 1 | 后台核心、默认热键、筛选、身份与权限安全 | In progress |
-| 2 | 设置、配置、语言、排除、登录启动与退出 | Pending |
-| 3 | 状态提示与可选托盘，MVP 包与核心验证 | Pending |
+| 1 | 后台核心、默认热键、筛选、身份与权限安全 | Implemented; MVP tests passed; platform gaps recorded |
+| 2 | 设置、配置、语言、排除、登录启动与退出 | Implemented; MVP tests passed; real sign-in pending |
+| 3 | 状态提示与可选托盘，MVP 包与核心验证 | Implemented; MVP tests passed; tray interaction gaps recorded |
 | 4 | Pin 按钮、事件跟随、多显示器和 DPI | Pending |
 | 5 | 完整兼容矩阵、长时间性能、MSVC/签名发布准备 | Pending |
 

@@ -1,7 +1,7 @@
 # QuietPin：Windows 轻量级窗口置顶工具技术实现文档
 
 日期：2026-10-05（北京时间）  
-状态：开发前设计；尚未实现或验证可执行程序。QuietPin 为暂定产品名，目录名保持 ping-tool。
+状态：完整版本技术设计；阶段 1–3 的 MVP 0.1 已实现，本机验收见 [验证记录](verification.zh-CN.md)。Pin 和完整兼容矩阵尚待后续实施。QuietPin 为暂定产品名，目录名保持 ping-tool。
 
 ## 1. 结论
 
@@ -421,7 +421,7 @@ Windows 不提供可靠的“最后由哪个工具改变 topmost”所有权信�
 | 4. Pin | 非激活可点击按钮、跟随、DPI、多屏、偏移 | 移动关闭无残留，跨屏尺寸与位置正确，关闭后无跟随负担 |
 | 5. 验收发布 | 测试宿主、实测、兼容矩阵、Release 包、使用说明 | 必需需求逐项有证据，交付 EXE/源码/文档/校验值 |
 
-建议源码目录（尚未创建）：
+完整版本建议源码目录（MVP 将 AppHost、设置、提示和托盘集中在 main.cpp，配置与窗口策略已独立为模块）：
 
 ```text
 CMakeLists.txt
@@ -493,4 +493,4 @@ README.md
 - [GetPrivateProfileStringW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getprivateprofilestringw)
 - [MoveFileExW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw)
 
-下一步为依据此设计建立 GSD 项目上下文、需求追踪与实施路线，再执行阶段 1。所有性能目标、兼容判断和发布结论都应在开发后的 verification 文档中填入实测证据。
+GSD 项目上下文、需求追踪与实施路线已建立。本次 MVP 包含自定义置顶快捷键、设置、排除、提示、登录启动和可选托盘；设置/退出快捷键暂时固定，Pin 尚未实现。所有性能与兼容结论以 verification 文档中的实测证据为准。

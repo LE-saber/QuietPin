@@ -39,6 +39,7 @@ try {
         handles=$process.HandleCount
         threads=$process.Threads.Count
         exeBytes=(Get-Item $exe).Length
+        exeSha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLower()
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $root 'build\idle-measurement.json')
 } finally {
     & $exe --config-dir $profile --exit

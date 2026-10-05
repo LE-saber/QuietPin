@@ -29,6 +29,19 @@ void chord(Hotkey h) {
     for(auto [bit,vk]:modifiers) if(h.modifiers&bit) key(vk,KEYEVENTF_KEYUP);
     check(SendInput(static_cast<UINT>(inputs.size()),inputs.data(),sizeof(INPUT))==inputs.size(),"send test hotkey input");
 }
+void heldChord(Hotkey h,bool press) {
+    std::vector<INPUT> inputs;
+    auto key=[&](WORD vk,DWORD flags) { INPUT i{}; i.type=INPUT_KEYBOARD; i.ki.wVk=vk; i.ki.dwFlags=flags; inputs.push_back(i); };
+    const std::pair<UINT,WORD> modifiers[]={{MOD_CONTROL,VK_CONTROL},{MOD_ALT,VK_MENU},{MOD_SHIFT,VK_SHIFT},{MOD_WIN,VK_LWIN}};
+    if(press) {
+        for(auto [bit,vk]:modifiers) if(h.modifiers&bit) key(vk,0);
+        key(static_cast<WORD>(h.key),0);
+    } else {
+        key(static_cast<WORD>(h.key),KEYEVENTF_KEYUP);
+        for(auto [bit,vk]:modifiers) if(h.modifiers&bit) key(vk,KEYEVENTF_KEYUP);
+    }
+    check(SendInput(static_cast<UINT>(inputs.size()),inputs.data(),sizeof(INPUT))==inputs.size(),"test held shortcut input");
+}
 void capture(HWND window,const std::filesystem::path& path) {
     RECT r{}; GetWindowRect(window,&r); int width=r.right-r.left,height=r.bottom-r.top;
     HDC screen=GetDC(nullptr),dc=CreateCompatibleDC(screen);
@@ -61,7 +74,7 @@ PROCESS_INFORMATION launch(const std::wstring& exe,const std::wstring& args) {
     CloseHandle(process.hThread); return process;
 }
 LRESULT CALLBACK proc(HWND hwnd,UINT msg,WPARAM w,LPARAM l) { return DefWindowProcW(hwnd,msg,w,l); }
-int main(int count,char** args) {
+int wmain(int count,wchar_t** args) {
     HANDLE running=nullptr; HWND target=nullptr,host=nullptr; std::filesystem::path directory;
     HWND previous=GetForegroundWindow();
     try {
@@ -81,12 +94,17 @@ int main(int count,char** args) {
         check(!IsWindowVisible(host),"host invisible");
         check(windowFor(app.dwProcessId,L"QuietPin.Settings.v1")==nullptr,"no initial settings window");
         activateTestWindow(target); check(waitFor([&]{return GetForegroundWindow()==target;}),"target foreground");
-        chord(settings.toggle);
+        heldChord(settings.toggle,true);
         check(waitFor([&]{return isTopmost(target);}),"pin via application hotkey dispatch");
         check(GetForegroundWindow()==target,"status does not steal foreground");
         HWND status=nullptr;
         check(waitFor([&]{status=windowFor(app.dwProcessId,L"QuietPin.Status.v1");return status && IsWindowVisible(status);}),"status appears after confirmation");
         check(status && (GetWindowLongPtrW(status,GWL_EXSTYLE)&WS_EX_NOACTIVATE),"non activating status window");
+        INPUT repeat{}; repeat.type=INPUT_KEYBOARD; repeat.ki.wVk=static_cast<WORD>(settings.toggle.key);
+        check(SendInput(1,&repeat,sizeof(INPUT))==1,"repeat held main key");
+        waitFor([]{return false;},120);
+        check(isTopmost(target),"holding/repeating key does not toggle again");
+        heldChord(settings.toggle,false);
         PostMessageW(host,WM_HOTKEY,10,0);
         check(waitFor([&]{return !isTopmost(target);}),"unpin via app");
         auto second=launch(exe,options+L" --settings");
@@ -148,12 +166,25 @@ int main(int count,char** args) {
         check(waitFor([&]{return WaitForSingleObject(running,0)==WAIT_OBJECT_0;},3000),"exit shortcut stops app");
         check(!isTopmost(target),"exit shortcut cleanup");
         CloseHandle(running); running=nullptr;
+        { std::ofstream broken(directory/L"settings.ini",std::ios::binary|std::ios::trunc); broken<<"invalid"; }
+        auto corrupt=launch(exe,options); running=corrupt.hProcess;
+        check(waitFor([&]{host=windowFor(corrupt.dwProcessId,L"QuietPin.Host.v1");ui=windowFor(corrupt.dwProcessId,L"QuietPin.Settings.v1");return host && ui && IsWindowVisible(ui);}),"corrupt configuration opens recovery UI");
+        bool backup=false;
+        for(const auto& entry:std::filesystem::directory_iterator(directory)) if(entry.path().extension()==L".bak") backup=true;
+        check(backup && std::filesystem::file_size(directory/L"settings.ini")==7,"corrupt original preserved and backed up");
+        auto stopCorrupt=launch(exe,options+L" --exit");
+        check(WaitForSingleObject(stopCorrupt.hProcess,3000)==WAIT_OBJECT_0,"corrupt-profile exit client"); CloseHandle(stopCorrupt.hProcess);
+        check(waitFor([&]{return WaitForSingleObject(running,0)==WAIT_OBJECT_0;}),"corrupt-profile recovery exit");
+        CloseHandle(running); running=nullptr;
         DestroyWindow(target); target=nullptr;
         std::filesystem::remove_all(directory);
         if(previous && IsWindow(previous)) SetForegroundWindow(previous);
         std::cout<<"PASS: hidden startup, hotkey dispatch, focus, toggle, single instance, conflict rollback, saved settings, background close and exit cleanup\n";
         return 0;
     } catch(const std::exception& e) {
+        INPUT release[5]{}; const WORD keys[]={VK_CONTROL,VK_MENU,VK_SHIFT,VK_LWIN,VK_F11};
+        for(int i=0;i<5;++i){ release[i].type=INPUT_KEYBOARD; release[i].ki.wVk=keys[i]; release[i].ki.dwFlags=KEYEVENTF_KEYUP; }
+        SendInput(5,release,sizeof(INPUT));
         UnregisterHotKey(nullptr,71);
         if(host) PostMessageW(host,WM_APP+1,2,0);
         if(running) {
