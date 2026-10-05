@@ -1,8 +1,18 @@
 # QuietPin 0.2
 
+**中文** · [English](https://github.com/LE-saber/QuietPin/blob/main/README.en.md)
+
 Windows 11 x64 轻量窗口置顶工具。原生 C++/Win32，不需要安装 .NET、Electron 或其他运行时。默认无主窗口、无控制台、无任务栏图标、无托盘图标。
 
-v0.2 包含可选 Pin 按钮，同时提供 Windows 安装 EXE 和便携 ZIP。[Pin 技术方案](docs/pin-implementation-plan.zh-CN.md) · [v0.2 验证记录](docs/verification-v0.2.0.zh-CN.md)。v0.1 历史发布保留。
+v0.2 包含可选 Pin 按钮，同时提供 Windows 安装 EXE 和便携 ZIP。当前为预发布，最终人工验收待完成；v0.1 历史发布保留。
+
+[下载 v0.2.0](https://github.com/LE-saber/QuietPin/releases/tag/v0.2.0) · [更新日志](https://github.com/LE-saber/QuietPin/blob/main/CHANGELOG.md) · [Pin 技术方案](https://github.com/LE-saber/QuietPin/blob/main/docs/pin-implementation-plan.zh-CN.md) · [验证记录](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.zh-CN.md)
+
+| 下载 | 用途 |
+| --- | --- |
+| [Windows 安装版 EXE](https://github.com/LE-saber/QuietPin/releases/download/v0.2.0/QuietPinSetup-v0.2.0-win-x64.exe) | Windows 11 x64，当前用户安装，无需管理员权限 |
+| [便携版 ZIP](https://github.com/LE-saber/QuietPin/releases/download/v0.2.0/QuietPin-v0.2.0-win-x64.zip) | 解压后直接运行，无需安装 |
+| [SHA256 校验文件](https://github.com/LE-saber/QuietPin/releases/download/v0.2.0/QuietPin-v0.2.0-SHA256SUMS.txt) | 校验安装版和便携 ZIP |
 
 ## 开始使用
 
@@ -24,6 +34,7 @@ v0.2 包含可选 Pin 按钮，同时提供 Windows 安装 EXE 和便携 ZIP。[
 - 自定义置顶快捷键（Ctrl/Alt/Shift/Win + 字母、数字或 F1–F11），冲突时保留旧组合与配置。
 - 中文 / English 设置、状态提示开关、登录启动开关。
 - 可选托盘，菜单提供置顶/取消、设置和退出；默认关闭。
+- 可选 Pin 按钮，点击切换置顶、事件跟随、位置偏移/重置；默认关闭。
 - 排除 EXE 文件名或完整路径；不区分大小写，精确匹配，每行一条。
 - 状态提示不抢焦点；关闭后操作结果可在设置中查看。
 - 保护桌面、任务栏及 Shell 特殊窗口；普通权限下拒绝受限窗口，不自动提权。
@@ -56,7 +67,7 @@ QuietPin.exe --startup
 
 ## 验证与边界
 
-已在本机 Windows 11 x64 构建并执行配置/策略测试及 Win32 真实窗口集成测试，包含真实 SendInput 热键、焦点保持、单实例、冲突回滚、语言/排除持久化、退出快捷键和正常退出清理。Pin 增量验证详见 `verification-v0.2.0.zh-CN.md`。
+已在本机 Windows 11 x64 构建并执行配置/策略测试及 Win32 真实窗口集成测试，包含真实 SendInput 热键、焦点保持、单实例、冲突回滚、语言/排除持久化、退出快捷键和正常退出清理。[Pin 增量验证](https://github.com/LE-saber/QuietPin/blob/main/docs/verification-v0.2.0.zh-CN.md)包含实际证据与待验项目。最终安装/升级/卸载、便携目录及应用兼容性验收按用户要求交人工测试，本次上传不重跑最终测试。
 
 这是 **MinGW 构建的未签名 v0.2**。尚未完成管理员窗口实机矩阵、Explorer 重启、所有常见应用、多屏/混合 DPI、登录后启动及两小时稳定性验收。MSVC 发布构建也未在此机器上验证。不自动修改 UAC 或要求管理员权限。
 
@@ -77,5 +88,5 @@ QuietPin.exe --startup
 
 安装包通过 Inno Setup 6.7+ 构建：`.\scripts\package.ps1 -InnoCompiler "C:\路径\ISCC.exe"`。打包脚本检查 EXE 版本，同时生成安装 EXE、便携 ZIP 和 SHA256 校验文件。`--exit-if-owned` 是安装升级/卸载使用的管理参数，只退出与命令 EXE 路径相同的实例，并等待清理完成。
 
-便携包内附 `technical-design.zh-CN.md` 与 `verification-v0.2.0.zh-CN.md`。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
+安装版和便携版附中英文 README、双语更新日志与验证记录。便携包另附 `technical-design.zh-CN.md` 和 Pin 技术计划。源码目录中的完整方案和后续路线分别位于 `docs/technical-design.zh-CN.md` 与 `.planning/ROADMAP.md`。
 

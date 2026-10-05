@@ -34,7 +34,10 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 [Files]
 Source: "{#BinaryPath}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\README.en.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\docs\verification-v0.2.0.zh-CN.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\verification-v0.2.0.en.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\open-settings.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\scripts\exit.cmd"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
