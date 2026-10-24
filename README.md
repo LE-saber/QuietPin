@@ -1,6 +1,6 @@
 # QuietPin
 
-[中文](README.zh.md) · **English**
+[English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 A lightweight always-on-top tool for Windows 11 x64. Native C++20 / Win32, with no additional runtime required. It runs in the background with no main window, taskbar button or tray icon by default.
 
@@ -63,3 +63,8 @@ Requires Windows, CMake 3.20+ and a C++20 compiler. Packaging uses Inno Setup 6.
 ```
 
 Command-line options: `--settings`, `--exit`, `--startup`, and `--config-dir "C:\Profile"` for a separate configuration. `--exit-if-owned` is used internally by the installer to stop only its installed copy.
+
+## Documentation and licensing
+
+These four README languages do not add application languages: the current application and installer support English and Simplified Chinese. No root project license is present; the bundled installer language file has its own [license notes](installer/languages/README.md).
+
