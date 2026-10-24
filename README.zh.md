@@ -1,6 +1,6 @@
 # QuietPin
 
-**中文** · [English](README.md)
+[English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 Windows 11 x64 轻量窗口置顶工具。原生 C++20 / Win32，无需额外运行时。默认后台运行，无主窗口、无任务栏图标、无托盘图标。
 
@@ -63,3 +63,8 @@ Pin 按钮和托盘图标默认关闭。Pin 按钮显示在活动窗口标题栏
 ```
 
 命令行参数：`--settings`、`--exit`、`--startup`。`--config-dir "C:\配置目录"` 可使用独立配置；`--exit-if-owned` 供安装程序退出本安装路径的实例。
+
+## 文档与许可
+
+README 提供四种语言；程序及安装器当前支持英语和简体中文。仓库没有根目录项目许可证，安装器语言文件的单独许可见[说明](installer/languages/README.md)。
+
